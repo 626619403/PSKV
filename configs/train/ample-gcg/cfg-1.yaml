@@ -1,0 +1,16 @@
+name: amplegcg
+suffix_length: 20
+steps: 500
+topk: 256
+search_width: 64
+batch_size: 16
+kv_cache: True
+optimizer_config:
+    name: adamw
+    lr: 0.01
+    weight_decay: 0.0
+train_batch_size: 32
+scheduler_config:
+    name: step_lr
+    step_size: 50
+    gamma: 0.8

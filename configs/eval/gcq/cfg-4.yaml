@@ -1,0 +1,8 @@
+name: gcq
+suffix_length: 20
+steps: 500
+search_width: 16
+top_bq: 16
+beam_size: 16
+width_bs: 16
+

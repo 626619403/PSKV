@@ -1,0 +1,33 @@
+mode: train
+
+epoch: 10
+batch_size: 4
+train:
+  epochs: 10
+  do_initial_eval: false
+  eval_every: 1
+  augment_target: true
+  replay_buffer:
+    num_updates: 8
+    size: 256
+    priority_alpha: 0.6
+    priority_factor: 
+      loss_delta: 1.0
+      jailbreaking: 1.0
+  prompter_optim_params:
+    lr:  0.05
+search_width: 64
+suffix_length: 20
+num_beams: 4
+repetition_penalty: 1.2
+topk: 48
+num_chunks: 1
+lambda_val: 100  
+candidates:
+  do_sample: true
+  temperature: 0.6
+  always_include_best: true
+beams:
+  do_sample: true
+  temperature: 0.6
+  always_include_best: true

@@ -1,0 +1,6 @@
+name: beast
+suffix_length: 20
+beam_size: 15
+search_width: 10
+width_bs: 15
+

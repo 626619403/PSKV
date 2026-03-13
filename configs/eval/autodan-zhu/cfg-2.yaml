@@ -1,0 +1,9 @@
+name: autodan-zhu
+suffix_length: 20
+obj_w1: 10
+obj_w2: 100
+topb: 64
+temperature: 2
+
+batch_size: 16
+iter_steps: 3
