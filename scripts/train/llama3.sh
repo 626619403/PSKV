@@ -7,6 +7,7 @@ i=""        # train_cfg
 dataset=""
 attack=""
 kv_cache=""
+random_seed=""
 
 # --- Parse Arguments ---
 while [[ $# -gt 0 ]]; do
@@ -30,6 +31,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --kv-cache)
             kv_cache=$2
+            shift 2
+            ;;
+        --random-seed)
+            random_seed=$2
             shift 2
             ;;
         *)
@@ -59,9 +64,16 @@ fi
 # --- Configuration ---
 cd "${src_path}"
 
+SEED_ARG=""
+SEED_SUFFIX=""
+if [[ -n ${random_seed} ]]; then
+    SEED_ARG="--random-seed ${random_seed}"
+    SEED_SUFFIX="_seed${random_seed}"
+fi
+
 model_id="meta-llama/Meta-Llama-3-8B-Instruct"
 datacollator="llama3-chat"
-save_path="../results/llama3/train-${attack}/cfg-${i}/kv-cache-${kv_cache}"
+save_path="../results/llama3/train-${attack}/cfg-${i}/kv-cache-${kv_cache}${SEED_SUFFIX}"
 
 # --- Execute Training ---
 echo "--- Starting Training: ${attack} ---"
@@ -74,7 +86,7 @@ python train.py \
     --save-dir "${save_path}" \
     --save-name attack_train \
     --target-llm "${model_id}" \
-    --kv-cache "${kv_cache}" 
-
+    --kv-cache "${kv_cache}" \
+    ${SEED_ARG}
 
 echo "--- Training Complete ---"

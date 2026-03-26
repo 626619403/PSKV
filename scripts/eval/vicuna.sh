@@ -6,12 +6,13 @@ k=""
 dataset=""
 attack=""
 kv_cache=""
+random_seed=""
 
 while [[ $# -gt 0 ]]; do
     if [[ $1 == "--src-path" ]]; then
         src_path=$2
         shift 2
-    
+
     elif [[ $1 == "--train-cfg" ]]; then
         i=$2
         shift 2
@@ -27,6 +28,9 @@ while [[ $# -gt 0 ]]; do
     elif [[ $1 == "--kv-cache" ]]; then
         kv_cache=$2
         shift 2
+    elif [[ $1 == "--random-seed" ]]; then
+        random_seed=$2
+        shift 2
     else
         shift 1
     fi
@@ -38,8 +42,8 @@ if [[ -z ${src_path} ]]; then
 elif [[ -z $k ]]; then
     echo "Error: --eval-cfg is required"
     exit 1
-elif [[ -z $dataset ]] || [[ $dataset != "harmbench-test50" ]] && [[ $dataset != "advbench-first50" ]]; then
-    echo "Error: --dataset is required and should be either 'harmbench-test50' or 'advbench-first50'"
+elif [[ -z $dataset ]] || [[ $dataset != "harmbench-test50" ]] && [[ $dataset != "advbench-first50" ]] && [[ $dataset != "wildjailbreak-50" ]]; then
+    echo "Error: --dataset is required and should be 'harmbench-test50', 'advbench-first50', or 'wildjailbreak-50'"
     exit 1
 elif [[ -z $attack ]]; then
     echo "Error: --attack is required and should be either 'ample-gcg' 'gcg', 'beast', 'autodan-zhu' or 'gcq'"
@@ -53,6 +57,8 @@ if [[ $dataset == "harmbench-test50" ]]; then
     ds_name="harmbench"
 elif [[ $dataset == "advbench-first50" ]]; then
     ds_name="advbench"
+elif [[ $dataset == "wildjailbreak-50" ]]; then
+    ds_name="wildjailbreak"
 fi
 
 cd ${src_path}
@@ -64,7 +70,14 @@ if LAUNCHER="" ; then
 fi
 
 
-save_path="../results/vicuna/eval-${attack}/cfg-$k/kv-cache-${kv_cache}"
+SEED_ARG=""
+SEED_SUFFIX=""
+if [[ -n ${random_seed} ]]; then
+    SEED_ARG="--random-seed ${random_seed}"
+    SEED_SUFFIX="_seed${random_seed}"
+fi
+
+save_path="../results/vicuna/eval-${attack}/cfg-$k/kv-cache-${kv_cache}${SEED_SUFFIX}"
 
 ${LAUNCHER} evaluate.py \
     --model-id ${model_id} \
@@ -75,8 +88,8 @@ ${LAUNCHER} evaluate.py \
     --save-dir ${save_path} \
     --exp-type build-evalset \
     --save-name build-${ds_name} \
-    --kv-cache ${kv_cache} 
-
+    --kv-cache ${kv_cache} \
+    ${SEED_ARG}
 
 ${LAUNCHER} evaluate.py \
     --judger-cfg-path ../configs/eval/judge.yaml \

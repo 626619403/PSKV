@@ -17,7 +17,7 @@ def add_shared_args(parser):
     parser.add_argument("--dataset", type=str, default=None,
                         choices=["advbench", "harmbench",
                                  "advbench-first50", "harmbench-test40", "harmbench-test50",
-                                 "alpaca"])
+                                 "alpaca", "wildjailbreak-50"])
     
     parser.add_argument("--suffix-length", type=int, default=None,
                         help="Length of the adversarial suffix to generate and train on; config default: 20")
