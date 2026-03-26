@@ -5,11 +5,13 @@
 #SBATCH --nodes=1
 #SBATCH --mem=64G
 #SBATCH --cpus-per-task=12
-#SBATCH --output=../logs/rebuttal/memory_profile_%j.out
-#SBATCH --error=../logs/rebuttal/memory_profile_%j.err
+#SBATCH --output=/ibex/user/wangx0t/project/PSKV/scripts/logs/rebuttal/memory_profile_%j.out
+#SBATCH --error=/ibex/user/wangx0t/project/PSKV/scripts/logs/rebuttal/memory_profile_%j.err
 
 source ~/.bashrc
 conda activate attack
+
+cd /ibex/user/wangx0t/project/PSKV/scripts
 
 echo "=========================================="
 echo "Per-layer Memory Profiling for GCG + PSKV"

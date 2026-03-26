@@ -5,11 +5,13 @@
 #SBATCH --nodes=1
 #SBATCH --mem=64G
 #SBATCH --cpus-per-task=12
-#SBATCH --output=../logs/rebuttal/long_context_%j.out
-#SBATCH --error=../logs/rebuttal/long_context_%j.err
+#SBATCH --output=/ibex/user/wangx0t/project/PSKV/scripts/logs/rebuttal/long_context_%j.out
+#SBATCH --error=/ibex/user/wangx0t/project/PSKV/scripts/logs/rebuttal/long_context_%j.err
 
 source ~/.bashrc
 conda activate attack
+
+cd /ibex/user/wangx0t/project/PSKV/scripts
 
 echo "=========================================="
 echo "Long-context experiments for rebuttal"

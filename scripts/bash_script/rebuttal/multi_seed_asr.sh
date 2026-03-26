@@ -5,11 +5,14 @@
 #SBATCH --nodes=1
 #SBATCH --mem=64G
 #SBATCH --cpus-per-task=12
-#SBATCH --output=../logs/rebuttal/multi_seed_asr_%j.out
-#SBATCH --error=../logs/rebuttal/multi_seed_asr_%j.err
+#SBATCH --output=/ibex/user/wangx0t/project/PSKV/scripts/logs/rebuttal/multi_seed_asr_%j.out
+#SBATCH --error=/ibex/user/wangx0t/project/PSKV/scripts/logs/rebuttal/multi_seed_asr_%j.err
 
 source ~/.bashrc
 conda activate attack
+
+# cd to scripts/ so ./eval/ and ./train/ paths resolve correctly
+cd /ibex/user/wangx0t/project/PSKV/scripts
 
 echo "=========================================="
 echo "Multi-seed ASR experiments for rebuttal"

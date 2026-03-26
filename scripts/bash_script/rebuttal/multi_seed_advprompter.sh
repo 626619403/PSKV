@@ -5,11 +5,13 @@
 #SBATCH --nodes=1
 #SBATCH --mem=64G
 #SBATCH --cpus-per-task=12
-#SBATCH --output=../logs/rebuttal/multi_seed_advprompter_%j.out
-#SBATCH --error=../logs/rebuttal/multi_seed_advprompter_%j.err
+#SBATCH --output=/ibex/user/wangx0t/project/PSKV/scripts/logs/rebuttal/multi_seed_advprompter_%j.out
+#SBATCH --error=/ibex/user/wangx0t/project/PSKV/scripts/logs/rebuttal/multi_seed_advprompter_%j.err
 
 source ~/.bashrc
 conda activate attack
+
+cd /ibex/user/wangx0t/project/PSKV/scripts
 
 echo "=========================================="
 echo "Multi-seed AdvPrompter experiments for rebuttal"
