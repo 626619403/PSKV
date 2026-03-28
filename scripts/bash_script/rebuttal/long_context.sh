@@ -12,6 +12,7 @@ source ~/.bashrc
 conda activate attack
 cd ./scripts
 
+module load cuda
 echo "=========================================="
 echo "Long-context experiments + Memory Profiling"
 echo "Start time: $(date)"
@@ -33,7 +34,7 @@ SAVE_BASE=../results/rebuttal/memory_profile
 echo "=== Part 1: Longer Suffix Lengths (GCG on HarmBench) ==="
 
 # --- suffix=40 ---
-for kv in Normal; do
+for kv in None Normal Ours; do
     echo "[Llama2-GCG-sfx40-${kv}]"
     bash ./eval/llama2.sh --src-path ../src --eval-cfg long-sfx40 --dataset harmbench-test50 --attack gcg --kv-cache ${kv}
     echo "Completed at: $(date)"
@@ -53,7 +54,7 @@ cd ../scripts
 echo "Memory profile sfx40 completed at: $(date)"
 
 # --- suffix=60 ---
-for kv in Normal; do
+for kv in None Normal Ours; do
     echo "[Llama2-GCG-sfx60-${kv}]"
     bash ./eval/llama2.sh --src-path ../src --eval-cfg long-sfx60 --dataset harmbench-test50 --attack gcg --kv-cache ${kv}
     echo "Completed at: $(date)"

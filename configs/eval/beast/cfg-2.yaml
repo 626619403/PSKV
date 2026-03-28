@@ -3,4 +3,4 @@ suffix_length: 20
 beam_size: 10
 search_width: 10
 width_bs: 10
-
+batch_size: 10
