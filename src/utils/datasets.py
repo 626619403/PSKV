@@ -481,10 +481,10 @@ class WildJailbreak:
 
     def __init__(self, root: str = "../data", max_samples: int = 50, min_prompt_len: int = 100):
         try:
-            ds = load_dataset("allenai/wildjailbreak", split="train")
+            ds = load_dataset("allenai/wildjailbreak", "eval", split="train")
         except Exception:
             ds = load_dataset("walledai/WildJailbreak", split="train")
-
+            
         # Filter for adversarial_harmful (longer prompts)
         filtered = [
             row for row in ds

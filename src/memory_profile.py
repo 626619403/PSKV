@@ -1,202 +1,295 @@
 #!/usr/bin/env python3
 """
-Per-layer memory profiling for GCG attack with PSKV vs baseline.
+Memory profiling for GCG attack with PSKV vs baseline.
 
-Produces per-layer peak memory traces showing how PSKV's layer-wise
+Produces peak memory traces showing how PSKV's layer-wise
 dynamic expansion avoids the memory spike of full prefix duplication.
 """
+import threading
+import time
+import traceback
+import gc
+
 import argparse
 import os
 import sys
 import json
 import torch
 import numpy as np
+import pandas as pd
 import transformers
 from contextlib import contextmanager
 
 import utils
-from attacks import GCG
+from attacks import GCG_MEM
 from utils import (
     initialize_prefix_cache,
     forward_with_cache,
     get_dataset,
     apply_final_defaults,
 )
+import sys
 
+class TeeOutput:
+    """Write to both stdout and a log file."""
+    def __init__(self, filepath, mode="w"):
+        self.terminal = sys.stdout
+        self.log = open(filepath, mode, buffering=1)  # line-buffered
 
-class LayerMemoryTracker:
-    """Hook-based tracker that records GPU memory at each transformer layer."""
+    def write(self, message):
+        self.terminal.write(message)
+        self.log.write(message)
 
-    def __init__(self, model):
-        self.model = model
-        self.hooks = []
-        self.layer_memory = {}  # {phase: {layer_idx: [mem_values]}}
+    def flush(self):
+        self.terminal.flush()
+        self.log.flush()
+
+    def close(self):
+        self.log.close()
+
+class ContinuousMemoryTracker:
+    def __init__(self, interval_ms=20):
+        self.interval = interval_ms / 1000
+        self.records = []
         self.current_phase = "idle"
+        self._running = False
+        self._thread = None
 
     def set_phase(self, phase):
         self.current_phase = phase
 
-    def _hook_fn(self, layer_idx):
-        def hook(module, input, output):
-            if torch.cuda.is_available():
-                torch.cuda.synchronize()
-                allocated_mb = torch.cuda.memory_allocated() / 1024 / 1024
-                reserved_mb = torch.cuda.memory_reserved() / 1024 / 1024
+    def start(self):
+        self._running = True
+        self.records = []
+        self._thread = threading.Thread(target=self._sample_loop, daemon=True)
+        self._thread.start()
 
-                phase = self.current_phase
-                if phase not in self.layer_memory:
-                    self.layer_memory[phase] = {}
-                if layer_idx not in self.layer_memory[phase]:
-                    self.layer_memory[phase][layer_idx] = []
-                self.layer_memory[phase][layer_idx].append({
-                    "allocated_mb": round(allocated_mb, 2),
-                    "reserved_mb": round(reserved_mb, 2),
+    def stop(self):
+        self._running = False
+        if self._thread is not None:
+            self._thread.join()
+
+    def _sample_loop(self):
+        start_time = time.time()
+        num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
+        while self._running:
+            if num_gpus > 0:
+                total_allocated = 0
+                for i in range(num_gpus):
+                    torch.cuda.synchronize(i)
+                    total_allocated += torch.cuda.memory_allocated(i)
+                self.records.append({
+                    "time_s": round(time.time() - start_time, 3),
+                    "allocated_mb": round(total_allocated / 1024 / 1024, 2),
+                    "phase": self.current_phase,
                 })
-        return hook
-
-    def register_hooks(self):
-        layers = None
-        # Try common model architectures
-        if hasattr(self.model, 'model') and hasattr(self.model.model, 'layers'):
-            layers = self.model.model.layers  # Llama, Mistral, Qwen
-        elif hasattr(self.model, 'transformer') and hasattr(self.model.transformer, 'h'):
-            layers = self.model.transformer.h  # GPT-2 style
-
-        if layers is None:
-            print("Warning: Could not find transformer layers for hooking.")
-            return
-
-        for idx, layer in enumerate(layers):
-            handle = layer.register_forward_hook(self._hook_fn(idx))
-            self.hooks.append(handle)
-        print(f"Registered memory hooks on {len(self.hooks)} layers.")
-
-    def remove_hooks(self):
-        for h in self.hooks:
-            h.remove()
-        self.hooks.clear()
-
-    def get_summary(self):
-        """Return per-phase, per-layer peak allocated memory."""
-        summary = {}
-        for phase, layers in self.layer_memory.items():
-            summary[phase] = {}
-            for layer_idx, records in layers.items():
-                peak_alloc = max(r["allocated_mb"] for r in records)
-                peak_reserved = max(r["reserved_mb"] for r in records)
-                summary[phase][layer_idx] = {
-                    "peak_allocated_mb": peak_alloc,
-                    "peak_reserved_mb": peak_reserved,
-                    "num_calls": len(records),
-                }
-        return summary
-
-    def reset(self):
-        self.layer_memory = {}
+            time.sleep(self.interval)
 
 
-def run_profiling(model_id, dataset_name, kv_cache_mode, num_prompts=5,
-                  suffix_length=20, steps=3, search_width=64, datacollator="llama2-chat"):
+def run_profiling(model_id, dataset_name, kv_cache_mode, save_dir,
+                  num_prompts=50, suffix_length=20, steps=20,
+                  search_width=64, datacollator="llama2-chat"):
     """Run GCG with memory profiling for a few steps."""
+    gc.collect()
+    torch.cuda.empty_cache()
+    os.makedirs(save_dir, exist_ok=True)
+    num_gpus = torch.cuda.device_count() if torch.cuda.is_available() else 0
+
+    torch.cuda.memory._record_memory_history(max_entries=100000)
+
     print(f"\n{'='*60}")
     print(f"Profiling: model={model_id}, kv_cache={kv_cache_mode}")
     print(f"{'='*60}")
 
-    # Load model
-    model, tokenizer = utils.get_model(model_id)
-    utils.fix_generation_config(model)
+    cont_tracker = ContinuousMemoryTracker(interval_ms=50)
+    cont_tracker.start()
 
-    # Setup tracker
-    tracker = LayerMemoryTracker(model)
-    tracker.register_hooks()
+    error_msg = None
 
-    # Load dataset
-    dataset = utils.get_dataset(dataset_name)
-    prompts = [dataset[i]["prompt"] for i in range(min(num_prompts, len(dataset)))]
-    targets = [dataset[i]["target"] for i in range(min(num_prompts, len(dataset)))]
+    try:
+        # Load model
+        cont_tracker.set_phase("model_load")
+        model, tokenizer = utils.get_model(model_id)
+        utils.fix_generation_config(model)
 
-    # Create attacker
-    attacker = GCG(
-        suffix_length=suffix_length,
-        steps=steps,
-        topk=256,
-        search_width=search_width,
-        batch_size=num_prompts,
-        width_bs=search_width,
-        kv_cache=kv_cache_mode,
-        disable_tqdm=True,
-    )
+        # Load dataset
+        dataset = utils.get_dataset(dataset_name)
+        prompts = [dataset[i]["prompt"] for i in range(min(num_prompts, len(dataset)))]
+        targets = [dataset[i]["target"] for i in range(min(num_prompts, len(dataset)))]
 
-    # Prepare inputs
-    pad_id = tokenizer.encode(tokenizer.eos_token, add_special_tokens=False)[0]
-    ids_mask_dict = attacker._build_ids_and_mask(
-        tokenizer, prompts, targets, device=model.device, pad_id=pad_id
-    )
+        # Create attacker
+        attacker = GCG_MEM(
+            suffix_length=suffix_length,
+            steps=steps,
+            topk=256,
+            mem_tracker=cont_tracker,
+            search_width=search_width,
+            batch_size=num_prompts,
+            width_bs=search_width,
+            kv_cache=kv_cache_mode,
+            disable_tqdm=True,
+        )
 
-    # Reset CUDA stats
-    if torch.cuda.is_available():
-        torch.cuda.reset_peak_memory_stats()
+        # Prepare inputs
+        pad_id = tokenizer.encode(tokenizer.eos_token, add_special_tokens=False)[0]
+        ids_mask_dict = attacker._build_ids_and_mask(
+            tokenizer, prompts, targets, device=model.device, pad_id=pad_id
+        )
+
+        # Reset CUDA stats
+        for i in range(num_gpus):
+            torch.cuda.reset_peak_memory_stats(i)
         torch.cuda.empty_cache()
 
-    baseline_alloc = torch.cuda.memory_allocated() / 1024 / 1024 if torch.cuda.is_available() else 0
-    print(f"Baseline GPU allocated (model loaded): {baseline_alloc:.1f} MB")
+        baseline_alloc = sum(
+            torch.cuda.memory_allocated(i) for i in range(num_gpus)
+        ) / 1024 / 1024 if num_gpus > 0 else 0
+        print(f"Baseline GPU allocated (model loaded, {num_gpus} GPUs): {baseline_alloc:.1f} MB")
 
-    # Phase 1: Prefix cache initialization
-    tracker.set_phase("prefix_cache_init")
-    if kv_cache_mode != "None":
-        message_embeds = model.get_input_embeddings()(ids_mask_dict["message_ids"])
-        cache = initialize_prefix_cache(
-            model=model, search_width=search_width,
-            message_embeds=message_embeds,
-            message_mask=ids_mask_dict["message_mask"],
-            cache_mode=kv_cache_mode,
-            grad_bs=num_prompts,
-            dataset_size=num_prompts,
+        # Phase 1: Prefix cache initialization
+        cont_tracker.set_phase("prefix_cache_init")
+        if kv_cache_mode != "None":
+            message_embeds = model.get_input_embeddings()(ids_mask_dict["message_ids"])
+            cache = initialize_prefix_cache(
+                model=model, search_width=search_width,
+                message_embeds=message_embeds,
+                message_mask=ids_mask_dict["message_mask"],
+                cache_mode=kv_cache_mode,
+                grad_bs=num_prompts,
+                dataset_size=num_prompts,
+            )
+            after_cache_alloc = sum(
+                torch.cuda.memory_allocated(i) for i in range(num_gpus)
+            ) / 1024 / 1024 if num_gpus > 0 else 0
+            print(f"After prefix cache init: {after_cache_alloc:.1f} MB (+{after_cache_alloc - baseline_alloc:.1f} MB)")
+            del cache
+            torch.cuda.empty_cache()
+
+
+        # Phase 2: Run attack steps
+        cont_tracker.set_phase("attack_forward")
+        print(f"Running {steps} GCG steps with profiling...")
+        attacker.attack_embeds(
+            model=model,
+            tokenizer=tokenizer,
+            device=model.device,
+            **ids_mask_dict,
         )
-        after_cache_alloc = torch.cuda.memory_allocated() / 1024 / 1024 if torch.cuda.is_available() else 0
-        print(f"After prefix cache init: {after_cache_alloc:.1f} MB (+{after_cache_alloc - baseline_alloc:.1f} MB)")
 
-    # Phase 2: Run attack steps with profiling
-    tracker.set_phase("attack_forward")
-    print(f"Running {steps} GCG steps with profiling...")
-    attacker.attack_embeds(
-        model=model,
-        tokenizer=tokenizer,
-        device=model.device,
-        **ids_mask_dict,
-    )
+    except Exception as e:
+        error_msg = str(e)
+        print(f"\nERROR during profiling kv_cache={kv_cache_mode}: {e}")
+        traceback.print_exc()
 
-    peak_alloc = torch.cuda.max_memory_allocated() / 1024 / 1024 if torch.cuda.is_available() else 0
-    peak_reserved = torch.cuda.max_memory_reserved() / 1024 / 1024 if torch.cuda.is_available() else 0
-    print(f"Peak GPU allocated: {peak_alloc:.1f} MB")
-    print(f"Peak GPU reserved: {peak_reserved:.1f} MB")
+    finally:
+        # 1. Stop background tracker
+        cont_tracker.stop()
 
-    # Get per-layer summary
-    summary = tracker.get_summary()
-    tracker.remove_hooks()
+        # 2. Collect peak stats (valid even after OOM — PyTorch keeps the high-water mark)
+        peak_alloc = sum(
+            torch.cuda.max_memory_allocated(i) for i in range(num_gpus)
+        ) / 1024 / 1024 if num_gpus > 0 else 0
+        peak_reserved = sum(
+            torch.cuda.max_memory_reserved(i) for i in range(num_gpus)
+        ) / 1024 / 1024 if num_gpus > 0 else 0
+        print(f"Peak GPU allocated ({num_gpus} GPUs): {peak_alloc:.1f} MB")
+        print(f"Peak GPU reserved ({num_gpus} GPUs): {peak_reserved:.1f} MB")
 
-    # Clean up
-    del model, tokenizer
-    torch.cuda.empty_cache()
+        # 3. Dump memory snapshot
+        tag = "_FAILED" if error_msg else ""
+        snapshot_path = os.path.join(save_dir, f"mem_snapshot_{kv_cache_mode}{tag}.pickle")
+        try:
+            torch.cuda.memory._dump_snapshot(snapshot_path)
+            print(f"Memory snapshot saved to {snapshot_path}")
+        except Exception as dump_err:
+            print(f"Warning: failed to dump snapshot: {dump_err}")
 
-    return {
+        # 4. Stop memory history recording
+        torch.cuda.memory._record_memory_history(enabled=None)
+        del model, tokenizer
+        # 5. Free GPU memory for next run
+        gc.collect()
+        torch.cuda.empty_cache()
+
+    result = {
         "model": model_id,
         "kv_cache": kv_cache_mode,
-        "baseline_allocated_mb": round(baseline_alloc, 2),
+        "num_gpus": num_gpus,
+        "tracker_records": cont_tracker.records,
+        "baseline_allocated_mb": round(locals().get("baseline_alloc", 0), 2),
         "peak_allocated_mb": round(peak_alloc, 2),
         "peak_reserved_mb": round(peak_reserved, 2),
-        "per_layer_summary": {
-            phase: {str(k): v for k, v in layers.items()}
-            for phase, layers in summary.items()
-        },
     }
+    if error_msg:
+        result["error"] = error_msg
+    return result
+
+
+def print_phase_summary(results):
+    """Print per-phase memory summary from ContinuousMemoryTracker records."""
+    print(f"\n{'='*60}")
+    print("PER-PHASE PEAK MEMORY SUMMARY")
+    print(f"{'='*60}")
+
+    for kv_mode in ["None", "Normal", "Ours"]:
+        if kv_mode not in results:
+            continue
+        records = results[kv_mode].get("tracker_records")
+        if not records:
+            error = results[kv_mode].get("error", "unknown")
+            print(f"\n  [{kv_mode}] No tracker records (error: {error})")
+            continue
+
+        df = pd.DataFrame(records)
+        phase_stats = df.groupby("phase")["allocated_mb"].agg(["max", "mean", "count"])
+        phase_stats = phase_stats.sort_values("max", ascending=False)
+
+        print(f"\n  [{kv_mode}] KV Cache Mode")
+        if "error" in results[kv_mode]:
+            print(f"  *** FAILED (OOM): partial data before crash ***")
+        print(f"  {'Phase':<30} {'Peak (MB)':>10} {'Mean (MB)':>10} {'Samples':>8}")
+        print(f"  {'-'*62}")
+        for phase, row in phase_stats.iterrows():
+            print(f"  {phase:<30} {row['max']:>10.1f} {row['mean']:>10.1f} {int(row['count']):>8}")
+
+    # Cross-mode comparison
+    modes_with_data = [m for m in ["None", "Normal", "Ours"]
+                       if m in results and results[m].get("tracker_records")]
+    if len(modes_with_data) >= 2:
+        print(f"\n{'='*60}")
+        print("CROSS-MODE COMPARISON (peak allocated MB per phase)")
+        print(f"{'='*60}")
+
+        peaks = {}
+        for mode in modes_with_data:
+            df = pd.DataFrame(results[mode]["tracker_records"])
+            if df.empty:
+                continue
+            peaks[mode] = df.groupby("phase")["allocated_mb"].max()
+
+        if peaks:
+            all_phases = sorted(set().union(*(p.index for p in peaks.values())))
+
+            header = f"  {'Phase':<30}"
+            for mode in peaks:
+                label = mode + (" (OOM)" if "error" in results[mode] else "")
+                header += f" {label+' (MB)':>16}"
+            print(header)
+            print(f"  {'-'*(30 + 17 * len(peaks))}")
+
+            for phase in all_phases:
+                line = f"  {phase:<30}"
+                for mode in peaks:
+                    val = peaks[mode].get(phase, 0)
+                    line += f" {val:>16.1f}"
+                print(line)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Per-layer memory profiling for GCG+PSKV")
+    parser = argparse.ArgumentParser(description="Memory profiling for GCG+PSKV")
     parser.add_argument("--model-id", type=str, default="meta-llama/Llama-2-7b-chat-hf")
     parser.add_argument("--dataset", type=str, default="harmbench-test50")
-    parser.add_argument("--num-prompts", type=int, default=5)
+    parser.add_argument("--num-prompts", type=int, default=50)
     parser.add_argument("--suffix-length", type=int, default=20)
     parser.add_argument("--steps", type=int, default=3)
     parser.add_argument("--search-width", type=int, default=64)
@@ -204,13 +297,16 @@ def main():
     args = parser.parse_args()
 
     os.makedirs(args.save_dir, exist_ok=True)
-
+    log_path = os.path.join(args.save_dir, "profiling_log.txt")
+    sys.stdout = TeeOutput(log_path)
+    sys.stderr = TeeOutput(os.path.join(args.save_dir, "profiling_err.txt"))
     results = {}
-    for kv_mode in ["None", "Ours"]:
+    for kv_mode in ["None", "Normal", "Ours"]:
         result = run_profiling(
             model_id=args.model_id,
             dataset_name=args.dataset,
             kv_cache_mode=kv_mode,
+            save_dir=args.save_dir,
             num_prompts=args.num_prompts,
             suffix_length=args.suffix_length,
             steps=args.steps,
@@ -225,38 +321,38 @@ def main():
         json.dump(results, f, indent=2)
     print(f"\nResults saved to {out_path}")
 
-    # Print comparison
+    # Print overall comparison
     print(f"\n{'='*60}")
     print("COMPARISON SUMMARY")
     print(f"{'='*60}")
     for kv_mode, r in results.items():
-        print(f"  KV Cache = {kv_mode}:")
+        status = " (OOM)" if "error" in r else ""
+        print(f"  KV Cache = {kv_mode}{status}:")
         print(f"    Peak Allocated: {r['peak_allocated_mb']:.1f} MB")
         print(f"    Peak Reserved:  {r['peak_reserved_mb']:.1f} MB")
 
     if "None" in results and "Ours" in results:
-        alloc_reduction = (1 - results["Ours"]["peak_allocated_mb"] / results["None"]["peak_allocated_mb"]) * 100
-        print(f"\n  Memory reduction (PSKV vs None): {alloc_reduction:.1f}%")
+        none_peak = results["None"]["peak_allocated_mb"]
+        ours_peak = results["Ours"]["peak_allocated_mb"]
+        if none_peak > 0 and "error" not in results["None"] and "error" not in results["Ours"]:
+            alloc_reduction = (1 - ours_peak / none_peak) * 100
+            print(f"\n  Memory reduction (PSKV vs None): {alloc_reduction:.1f}%")
 
-    # Print per-layer comparison for attack_forward phase
+    if "Normal" in results and "error" in results["Normal"]:
+        print(f"\n  Normal KV cache: OOM (demonstrates memory overhead of full duplication)")
+        if "Ours" in results and "error" not in results["Ours"]:
+            print(f"  PSKV succeeded with peak {results['Ours']['peak_allocated_mb']:.1f} MB")
+
+    print_phase_summary(results)
+
     print(f"\n{'='*60}")
-    print("PER-LAYER PEAK ALLOCATED MEMORY (attack_forward phase)")
-    print(f"{'Layer':<8} {'None (MB)':<15} {'PSKV (MB)':<15} {'Reduction':<10}")
-    print("-" * 48)
-    for kv_mode in ["None", "Ours"]:
-        if "attack_forward" not in results[kv_mode]["per_layer_summary"]:
-            print(f"  No attack_forward data for {kv_mode}")
-            continue
-
-    none_layers = results.get("None", {}).get("per_layer_summary", {}).get("attack_forward", {})
-    ours_layers = results.get("Ours", {}).get("per_layer_summary", {}).get("attack_forward", {})
-
-    all_layers = sorted(set(list(none_layers.keys()) + list(ours_layers.keys())), key=lambda x: int(x))
-    for layer in all_layers:
-        none_val = none_layers.get(layer, {}).get("peak_allocated_mb", 0)
-        ours_val = ours_layers.get(layer, {}).get("peak_allocated_mb", 0)
-        reduction = (1 - ours_val / none_val) * 100 if none_val > 0 else 0
-        print(f"  {layer:<8} {none_val:<15.1f} {ours_val:<15.1f} {reduction:<10.1f}%")
+    print("MEMORY SNAPSHOTS (open in https://pytorch.org/memory_viz)")
+    print(f"{'='*60}")
+    for kv_mode in ["None", "Normal", "Ours"]:
+        for suffix in ["", "_FAILED"]:
+            path = os.path.join(args.save_dir, f"mem_snapshot_{kv_mode}{suffix}.pickle")
+            if os.path.exists(path):
+                print(f"  {kv_mode}{suffix}: {path}")
 
 
 if __name__ == "__main__":
