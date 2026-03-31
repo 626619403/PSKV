@@ -2,6 +2,10 @@
 
 This repository contains the source code and experimental setup for the paper *"Accelerating Suffix Jailbreak Attacks with Prefix-Shared KV-cache"*. It provides the necessary tools to reproduce our findings on adversarial attacks against large language models.
 
+## For reviewer
+
+All of memory snapshots and layer-by-layer analysis results are under "memory_snapshot" folder. All of scripts used to run these experiment are under script/bash_script/rebuttal folder. 
+
 ## 1. Setup
 
 ### Installation with Pip
