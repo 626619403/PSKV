@@ -1,0 +1,156 @@
+
+============================================================
+Profiling: model=meta-llama/Llama-2-7b-chat-hf, kv_cache=None
+============================================================
+
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]
+Loading checkpoint shards:  50%|#####     | 1/2 [00:07<00:07,  7.56s/it]
+Loading checkpoint shards: 100%|##########| 2/2 [00:09<00:00,  4.41s/it]
+Loading checkpoint shards: 100%|##########| 2/2 [00:09<00:00,  4.89s/it]
+<frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+<frozen importlib._bootstrap>:241: DeprecationWarning: built-in type SwigPyObject has no __module__ attribute
+Baseline GPU allocated (model loaded, 2 GPUs): 12852.6 MB
+Running 5 GCG steps with profiling...
+
+  0%|          | 0/5 [00:00<?, ?step/s]
+ 20%|##        | 1/5 [00:30<02:02, 30.68s/step]
+ 40%|####      | 2/5 [01:00<01:31, 30.46s/step]
+ 60%|######    | 3/5 [01:31<01:00, 30.41s/step]
+ 80%|########  | 4/5 [02:01<00:30, 30.33s/step]
+100%|##########| 5/5 [02:31<00:00, 30.21s/step]
+100%|##########| 5/5 [02:31<00:00, 30.31s/step]
+Peak GPU allocated (2 GPUs): 92784.6 MB
+Peak GPU reserved (2 GPUs): 115988.0 MB
+Memory snapshot saved to ../results/rebuttal/memory_profile/sfx40_harmbench/mem_snapshot_None.pickle
+
+============================================================
+Profiling: model=meta-llama/Llama-2-7b-chat-hf, kv_cache=Normal
+============================================================
+
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]
+Loading checkpoint shards:  50%|#####     | 1/2 [00:02<00:02,  2.67s/it]
+Loading checkpoint shards: 100%|##########| 2/2 [00:03<00:00,  1.60s/it]
+Loading checkpoint shards: 100%|##########| 2/2 [00:03<00:00,  1.76s/it]
+Baseline GPU allocated (model loaded, 2 GPUs): 12885.1 MB
+After prefix cache init: 93634.2 MB (+80749.1 MB)
+Running 5 GCG steps with profiling...
+
+  0%|          | 0/5 [00:00<?, ?step/s]
+ 20%|##        | 1/5 [00:21<01:24, 21.23s/step]
+ 40%|####      | 2/5 [00:42<01:03, 21.33s/step]
+ 60%|######    | 3/5 [01:03<00:42, 21.27s/step]
+ 80%|########  | 4/5 [01:25<00:21, 21.28s/step]
+100%|##########| 5/5 [01:46<00:00, 21.47s/step]
+100%|##########| 5/5 [01:46<00:00, 21.39s/step]
+Peak GPU allocated (2 GPUs): 141424.5 MB
+Peak GPU reserved (2 GPUs): 144188.0 MB
+Memory snapshot saved to ../results/rebuttal/memory_profile/sfx40_harmbench/mem_snapshot_Normal.pickle
+
+============================================================
+Profiling: model=meta-llama/Llama-2-7b-chat-hf, kv_cache=Ours
+============================================================
+
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]
+Loading checkpoint shards:  50%|#####     | 1/2 [00:04<00:04,  4.27s/it]
+Loading checkpoint shards: 100%|##########| 2/2 [00:05<00:00,  2.21s/it]
+Loading checkpoint shards: 100%|##########| 2/2 [00:05<00:00,  2.52s/it]
+Baseline GPU allocated (model loaded, 2 GPUs): 12885.1 MB
+After prefix cache init: 25909.2 MB (+13024.1 MB)
+Running 5 GCG steps with profiling...
+
+  0%|          | 0/5 [00:00<?, ?step/s]
+ 20%|##        | 1/5 [00:21<01:24, 21.14s/step]
+ 40%|####      | 2/5 [00:42<01:03, 21.18s/step]
+ 60%|######    | 3/5 [01:03<00:42, 21.16s/step]
+ 80%|########  | 4/5 [01:24<00:21, 21.20s/step]
+100%|##########| 5/5 [01:45<00:00, 21.19s/step]
+100%|##########| 5/5 [01:45<00:00, 21.18s/step]
+Peak GPU allocated (2 GPUs): 73699.5 MB
+Peak GPU reserved (2 GPUs): 82648.0 MB
+Memory snapshot saved to ../results/rebuttal/memory_profile/sfx40_harmbench/mem_snapshot_Ours.pickle
+
+Results saved to ../results/rebuttal/memory_profile/sfx40_harmbench/memory_profile_Llama-2-7b-chat-hf.json
+
+============================================================
+COMPARISON SUMMARY
+============================================================
+  KV Cache = None:
+    Peak Allocated: 92784.6 MB
+    Peak Reserved:  115988.0 MB
+  KV Cache = Normal:
+    Peak Allocated: 141424.5 MB
+    Peak Reserved:  144188.0 MB
+  KV Cache = Ours:
+    Peak Allocated: 73699.5 MB
+    Peak Reserved:  82648.0 MB
+
+  Memory reduction (PSKV vs None): 20.6%
+
+============================================================
+PER-PHASE PEAK MEMORY SUMMARY
+============================================================
+
+  [None] KV Cache Mode
+  Phase                           Peak (MB)  Mean (MB)  Samples
+  --------------------------------------------------------------
+  Grad::Forward                     67630.4    48813.3       34
+  Grad::LossBackward                67089.4    41065.4        5
+  Score::Forward                    49220.9    32449.5       24
+  Grad::OneHotEmbed                 42245.0    27638.4        4
+  Update::Filter                    41763.7    41763.6      127
+  Score::LossCompute                41760.6    41760.2        8
+  Grad::TopKSelection               17727.8    16600.9       11
+  Init::EmbeddingLookup             12869.4    12861.0        2
+  model_load                        12852.5     7176.3      230
+
+  [Normal] KV Cache Mode
+  Phase                           Peak (MB)  Mean (MB)  Samples
+  --------------------------------------------------------------
+  Grad::Forward                    120268.4   108264.7       40
+  Score::LossCompute               118584.9   104721.5       13
+  Score::Forward                   111334.1    98160.6       26
+  Grad::LossBackward               102673.5    98955.2        2
+  Grad::OneHotEmbed                102663.3   102663.3        2
+  Update::Filter                   102182.0   102182.0      124
+  prefix_cache_init                 91998.1    50317.6       19
+  Score::EmbedLookup                87413.3    86587.1        5
+  Grad::TopKSelection               86413.3    85586.9        5
+  Init::KVCache                     81866.4    54991.4       12
+  model_load                        12885.0     8299.8      116
+
+  [Ours] KV Cache Mode
+  Phase                           Peak (MB)  Mean (MB)  Samples
+  --------------------------------------------------------------
+  Score::Forward                    55909.1    37787.6       15
+  Grad::Forward                     50319.5    40453.7       13
+  Grad::LossBackward                43909.7    29940.6        5
+  Grad::OneHotEmbed                 34938.3    34938.3        1
+  Update::Filter                    34457.0    34457.0      126
+  Score::LossCompute                34454.0    34453.3        9
+  prefix_cache_init                 26154.4    19020.5        5
+  Score::EmbedLookup                19688.3    19688.3        3
+  Grad::TopKSelection               18688.3    17861.9        5
+  Update::SelectBest                17278.2    17278.2        1
+  Score::BuildCandEmbeds            15557.2    15557.2        1
+  model_load                        12885.0     7347.9      146
+
+============================================================
+CROSS-MODE COMPARISON (peak allocated MB per phase)
+============================================================
+  Phase                                 None (MB)      Normal (MB)        Ours (MB)
+  ---------------------------------------------------------------------------------
+  Grad::Forward                           67630.4         120268.4          50319.5
+  Grad::LossBackward                      67089.4         102673.5          43909.7
+  Grad::OneHotEmbed                       42245.0         102663.3          34938.3
+  Grad::TopKSelection                     17727.8          86413.3          18688.3
+  Init::EmbeddingLookup                   12869.4              0.0              0.0
+  Init::KVCache                               0.0          81866.4              0.0
+  Score::BuildCandEmbeds                      0.0              0.0          15557.2
+  Score::EmbedLookup                          0.0          87413.3          19688.3
+  Score::Forward                          49220.9         111334.1          55909.1
+  Score::LossCompute                      41760.6         118584.9          34454.0
+  Update::Filter                          41763.7         102182.0          34457.0
+  Update::SelectBest                          0.0              0.0          17278.2
+  model_load                              12852.5          12885.0          12885.0
+  prefix_cache_init                           0.0          91998.1          26154.4
+
