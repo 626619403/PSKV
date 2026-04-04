@@ -110,7 +110,6 @@ class BaseCache(DynamicCache):
         Note: Subclasses (StandardCache) usually implement mechanisms (like __getitem__) 
         to auto-create layers if they don't exist.
         """
-
         self[layer_idx].initialize_layer(key_states, value_states)
 
     def reorder_cache(self, beam_idx: torch.LongTensor):
@@ -129,7 +128,6 @@ class BaseCache(DynamicCache):
                 layer.keys = layer.keys.index_select(0, beam_idx)
                 layer.values = layer.values.index_select(0, beam_idx)
             else:
-
                 pass
 
     def get_mask_sizes(self, cache_position: torch.Tensor, layer_idx: int) -> Tuple[int, int]:
@@ -412,18 +410,6 @@ def forward_with_cache(
         bsz = full_ids.shape[0] if full_ids is not None else full_embeds.shape[0]
         device = model.device
 
-    past_len = 0
-    if cache_mode != "None" and cache is not None:
-
-        c = cache[0] if isinstance(cache, list) else cache
-        if hasattr(c, "get_seq_length"):
-            past_len = c.get_seq_length()
-        elif hasattr(c, "layers") and len(c.layers) > 0:
-            past_len = c.layers[0].get_seq_length()
-
-    position_ids = torch.arange(past_len, past_len + seq_len, dtype=torch.long, device=device)
-    position_ids = position_ids.unsqueeze(0).expand(bsz, -1)
-
     if cache_mode != "None":
         cache_list = cache if isinstance(cache, list) else [cache]
         if message_embeds is None and message_ids is None:
@@ -445,7 +431,6 @@ def forward_with_cache(
                 attention_mask=attention_mask,
                 past_key_values=input_cache,
                 use_cache=True,
-                position_ids=position_ids,
             )["logits"]
         else:
             logits = model(
@@ -453,7 +438,6 @@ def forward_with_cache(
                 attention_mask=attention_mask,
                 past_key_values=input_cache,
                 use_cache=True,
-                position_ids=position_ids,
             )["logits"]
 
         for c in cache_list:
