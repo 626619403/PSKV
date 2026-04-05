@@ -1,0 +1,59 @@
+============================================================
+Logit Equivalence Test
+Model: meta-llama/Llama-2-7b-chat-hf
+Dataset: harmbench-test50, 1 prompts, sfx_len=20
+============================================================
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:05<00:00,  2.57s/it]
+/anaconda3/envs/attack/lib/python3.11/site-packages/torchrl/__init__.py:43: UserWarning: failed to set start method to spawn, and current start method for mp is fork.
+  warn(
+INFO 04-05 21:57:27 [importing.py:53] Triton module has been replaced with a placeholder.
+INFO 04-05 21:57:27 [__init__.py:239] Automatically detected platform cuda.
+
+--- Test 1: Full forward (No Cache) ---
+  logits_none shape: torch.Size([1, 42, 32000])
+
+--- Test 2: PSKV forward (Ours) ---
+  logits_ours shape: torch.Size([1, 42, 32000])
+
+--- Test 3: Normal KV cache forward ---
+  logits_normal shape: torch.Size([1, 42, 32000])
+
+============================================================
+LOGIT COMPARISON RESULTS
+============================================================
+
+  None vs PSKV(Ours):
+    Max absolute logit diff:    0.00e+00
+    Mean absolute logit diff:   0.00e+00
+    Median absolute logit diff: 0.00e+00
+    Loss A: 1.349935, Loss B: 1.349935, Diff: 0.00e+00
+    Prediction match rate:      1.0000 (100.00%)
+
+  None vs Normal:
+    Max absolute logit diff:    0.00e+00
+    Mean absolute logit diff:   0.00e+00
+    Median absolute logit diff: 0.00e+00
+    Loss A: 1.349935, Loss B: 1.349935, Diff: 0.00e+00
+    Prediction match rate:      1.0000 (100.00%)
+
+  Normal vs PSKV(Ours):
+    Max absolute logit diff:    0.00e+00
+    Mean absolute logit diff:   0.00e+00
+    Median absolute logit diff: 0.00e+00
+    Loss A: 1.349935, Loss B: 1.349935, Diff: 0.00e+00
+    Prediction match rate:      1.0000 (100.00%)
+
+============================================================
+PER-PROMPT LOGIT DIFF (None vs PSKV)
+============================================================
+  Prompt     Max Diff    Mean Diff   Pred Match
+  ----------------------------------------------
+       0     0.00e+00     0.00e+00        1.00%
+
+============================================================
+VERDICT: PASS — Max logit diff = 0.00e+00 (< 1e-3)
+PSKV is numerically equivalent to full recomputation.
+============================================================
+
+Results saved to ../results/rebuttal/logit_equiv/logit_equivalence_results.json
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
