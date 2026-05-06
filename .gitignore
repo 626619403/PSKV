@@ -1,7 +1,9 @@
 __pycache__/
 *~
 *.swp
-results/
+results/*
+!results/.gitkeep
+!results/*.md
 todo*
 */dcgm
 *.pyc
@@ -11,3 +13,8 @@ logs
 log
 AGENT*
 111*
+reviewer_*
+TODO*
+tmp
+*trace
+trace

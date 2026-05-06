@@ -70,16 +70,15 @@ def build_evalset(args, logger):
     utils.save_yaml(evalset_cfg, f"{args.save_dir}/{args.save_name}_evalset-cfg.yaml")
     evalset_cfg = evaltools.EvalsetConfig(**evalset_cfg)
     model_path = None
-    model, tokenizer = utils.get_model(args.model_id)
-    if evalset_cfg.attacker_config["name"] in ["beast_vllm", "beast_sglang"]:
+    attacker_name = evalset_cfg.attacker_config["name"]
+    if attacker_name in ["beast_vllm", "beast_sglang"]:
         model_path = args.model_id
-        del model
         model = None
-        
-        torch.cuda.empty_cache()
-        gc.collect()
-        
-    if model is not None:
+        tokenizer = AutoTokenizer.from_pretrained(
+            args.model_id, use_fast=True, padding_side="left"
+        )
+    else:
+        model, tokenizer = utils.get_model(args.model_id)
         if hasattr(model, 'generation_config'):
             gen_config = model.generation_config
             if not gen_config.do_sample and hasattr(gen_config, 'temperature'):

@@ -17,7 +17,7 @@ def add_shared_args(parser):
     parser.add_argument("--dataset", type=str, default=None,
                         choices=["advbench", "harmbench",
                                  "advbench-first50", "harmbench-test40", "harmbench-test50",
-                                 "alpaca"])
+                                 "alpaca", "wildjailbreak-50"])
     
     parser.add_argument("--suffix-length", type=int, default=None,
                         help="Length of the adversarial suffix to generate and train on; config default: 20")
@@ -32,7 +32,8 @@ def add_shared_args(parser):
                         help="Top-k gradient candidates per generation step; config default: 256")
     parser.add_argument("--kv-cache", type=str, default="None",
                         help="KV cache; config default: None")
-
+    parser.add_argument("--dtype", type=str, default=None,choices=["float16", "bfloat16", "float32","float64"],
+                        help="Model precision; config default: 'float16'")
 def add_attack_train_args(parser):
     assert isinstance(parser, argparse.ArgumentParser)
 
@@ -55,6 +56,7 @@ def add_attack_train_args(parser):
                         help="Replay buffer size; config default: 100")
     parser.add_argument("--epochs", type=int, default=None,
                         help="Number of epochs; config default: 100")
+
     # LoRA config path (not included in shared args)
     parser.add_argument(
         "--lora-cfg-path",

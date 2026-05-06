@@ -6,14 +6,15 @@ i="" # train_cfg
 k="" # eval_cfg
 dataset=""
 attack=""
-kv_cache="" 
+kv_cache=""
+random_seed=""
 
 
 while [[ $# -gt 0 ]]; do
     if [[ $1 == "--src-path" ]]; then
         src_path=$2
         shift 2
-    
+
     elif [[ $1 == "--train-cfg" ]]; then
         i=$2
         shift 2
@@ -29,6 +30,9 @@ while [[ $# -gt 0 ]]; do
     elif [[ $1 == "--kv-cache" ]]; then
         kv_cache=$2
         shift 2
+    elif [[ $1 == "--random-seed" ]]; then
+        random_seed=$2
+        shift 2
     else
         shift 1
     fi
@@ -40,11 +44,11 @@ if [[ -z ${src_path} ]]; then
 elif [[ -z $k ]]; then
     echo "Error: --eval-cfg is required"
     exit 1
-elif [[ -z $dataset ]] || [[ $dataset != "harmbench-test50" ]] && [[ $dataset != "advbench-first50" ]]; then
-    echo "Error: --dataset is required and should be either 'harmbench-test50' or 'advbench-first50'"
+elif [[ -z $dataset ]] || [[ $dataset != "harmbench-test50" ]] && [[ $dataset != "advbench-first50" ]] && [[ $dataset != "wildjailbreak-50" ]]; then
+    echo "Error: --dataset is required and should be 'harmbench-test50', 'advbench-first50', or 'wildjailbreak-50'"
     exit 1
 elif [[ -z $attack ]]; then
-    echo "Error: --attack is required and should be either 'gcg', 'beast', 'autodan-zhu' or 'gcq'"
+    echo "Error: --attack is required"
     exit 1
 
 elif [[ -z $kv_cache ]] || [[ $kv_cache != "None" ]] && [[ $kv_cache != "Normal" ]] && [[ $kv_cache != "Ours" ]]; then
@@ -56,20 +60,43 @@ if [[ $dataset == "harmbench-test50" ]]; then
     ds_name="harmbench"
 elif [[ $dataset == "advbench-first50" ]]; then
     ds_name="advbench"
+elif [[ $dataset == "wildjailbreak-50" ]]; then
+    ds_name="wildjailbreak"
 fi
+
+attack_cfg="$attack"
+case "$attack_cfg" in
+    beast-vllm) attack_cfg="beast_vllm" ;;
+    beast-sglang) attack_cfg="beast_sglang" ;;
+esac
+case "${attack_cfg}" in
+    gcg|gcq|beast|beast_vllm|beast_sglang|autodan-zhu|ample-gcg|adv-prompter)
+        ;;
+    *)
+        echo "Error: --attack should be one of 'gcg', 'gcq', 'beast', 'beast-vllm', 'beast-sglang', 'autodan-zhu', 'ample-gcg', or 'adv-prompter'"
+        exit 1
+        ;;
+esac
 
 cd ${src_path}
 
 model_id="meta-llama/Llama-2-7b-chat-hf"
 datacollator="llama2-chat"
 
-if LAUNCHER="" ; then
+if [[ -z "${LAUNCHER}" ]]; then
     LAUNCHER="python3"
 fi
 
 echo 
 
-save_path="../results/llama2/eval-${attack}/cfg-$k/kv-cache-${kv_cache}"
+SEED_ARG=""
+SEED_SUFFIX=""
+if [[ -n ${random_seed} ]]; then
+    SEED_ARG="--random-seed ${random_seed}"
+    SEED_SUFFIX="_seed${random_seed}"
+fi
+
+save_path="../results/llama2/eval-${attack_cfg}/cfg-$k/kv-cache-${kv_cache}${SEED_SUFFIX}"
 
 echo "--- Step 1: Building evaluation set (vanilla) ---"
 ${LAUNCHER} evaluate.py \
@@ -77,11 +104,12 @@ ${LAUNCHER} evaluate.py \
     --dataset ${dataset} \
     --datacollator ${datacollator} \
     --evalset-cfg-path ../configs/eval/evalset.yaml \
-    --atker-cfg-path ../configs/eval/${attack}/cfg-$k.yaml \
+    --atker-cfg-path ../configs/eval/${attack_cfg}/cfg-$k.yaml \
     --save-dir ${save_path} \
     --exp-type build-evalset \
     --save-name build-${ds_name} \
-    --kv-cache ${kv_cache} 
+    --kv-cache ${kv_cache} \
+    ${SEED_ARG}
 
 echo "--- Step 2: Judging evaluation set ---"
 ${LAUNCHER} evaluate.py \

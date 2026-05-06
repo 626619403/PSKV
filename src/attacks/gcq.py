@@ -85,9 +85,16 @@ class GCQ(AttackerBase):
         out_logps = torch.gather(out_logps, dim=-1, index=target_ids.unsqueeze(-1)).squeeze(-1)
         score = -(out_logps * target_mask).mean(dim=-1) # shape: [B, tar_len] -> [B,]
         score = score.unsqueeze(0).expand(beam_size, B).contiguous() # shape: [beam_size, B]
-
-        cache = initialize_prefix_cache(raw_cache=outputs["past_key_values"],
-            search_width=self.search_width, cache_mode=self.kv_cache) if self.kv_cache != "None" else None
+        msg_outputs = model(
+            input_ids=message_ids,
+            attention_mask=message_mask,
+        )
+        cache = initialize_prefix_cache(
+            raw_cache=msg_outputs["past_key_values"],
+            search_width=self.search_width,
+            cache_mode=self.kv_cache,
+        )
+        del msg_outputs
 
         advsfx_ids = advsfx_ids.unsqueeze(0).expand(beam_size, -1, -1).contiguous()
         advsfx_mask = advsfx_mask.unsqueeze(0).expand(beam_size, -1, -1).contiguous()

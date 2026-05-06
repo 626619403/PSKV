@@ -1,5 +1,6 @@
 from .gcg import GCG
 from .gcq import GCQ
+from .gcg_memory_test import GCG_MEM
 from .beast import BEAST
 from .autodan_zhu import AutoDANZhu
 
@@ -17,6 +18,7 @@ __attacker_zoo__ = {
     "adv-prompter"     : AdvPrompterOpt,
     "beast_sglang"     : BEAST_SGLang,
     "beast_vllm"       : BEAST_VLLM,
+    "gcg_mem"          : GCG_MEM,
 }
 
 def build_attacker(name: str, **kwargs):

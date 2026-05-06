@@ -3,6 +3,6 @@ suffix_length: 20
 steps: 500
 search_width: 64
 top_bq: 64
-beam_size: 16
-width_bs: 16
+beam_size: 8
+width_bs: 8
 

@@ -1,0 +1,48 @@
+
+\begin{table*}[t]
+\small
+\scriptsize
+\centering
+\caption{
+Time usage (min) for (1) optimization-based suffix synthesis and (2) model-based training sample generation. Parentheses ($\times$) indicate speed-up factors vs. the unaccelerated baseline. \textbf{OOM}: Out Of Memory.
+}
+\label{tab:time-usage}
+% \resizebox{\textwidth}{!}{%
+\begin{tabular}{l l c c c c c c}
+\toprule
+\multirow{2}{*}{\textbf{Model}} & \multirow{2}{*}{\textbf{Acceleration}}
+& \multicolumn{4}{c}{\textbf{Optimization-based Attacks}}
+& \multicolumn{2}{c}{\textbf{Model-based Attacks}} \\
+\cmidrule(lr){3-6}
+\cmidrule(lr){7-8}
+& & \textbf{GCG} & \textbf{GCQ} & \textbf{Zhu's AutoDAN} & \textbf{BEAST} & \textbf{AmpleGCG} & \textbf{AdvPrompter} \\
+\midrule
+\multirow{3}{*}{Vicuna-7B}
+& None & 228 \scriptsize($\times$ 1.00)& 247 \scriptsize($\times$ 1.00) & 88 \scriptsize($\times$ 1.00)& 23 \scriptsize($\times$ 1.00)& 349 \scriptsize($\times$ 1.00)& 462 \scriptsize($\times$ 1.00)\\
+& Standard KV Cache & 147 \scriptsize($\times$ 1.55)& OOM& OOM& OOM& 239 \scriptsize($\times$ 1.46)& 160 \scriptsize($\times$ 2.89)\\
+& PSKV (Ours) & 146 \scriptsize($\times$ 1.56)& 148 \scriptsize($\times$ 1.67)& 50 \scriptsize($\times$ 1.76)& 15 \scriptsize($\times$ 1.53)& 253 \scriptsize($\times$ 1.38)& 199 \scriptsize($\times$ 2.32)\\
+\midrule
+\multirow{3}{*}{Llama-2-7B}
+& None & 221 \scriptsize($\times$ 1.00)& 210 \scriptsize($\times$ 1.00)& 86 \scriptsize($\times$ 1.00)& 26
+\scriptsize($\times$ 1.00)& 349 \scriptsize($\times$ 1.00)& 513 \scriptsize($\times$ 1.00)\\
+& Standard KV Cache & 142 \scriptsize($\times$ 1.56)& OOM& OOM& OOM& 242 \scriptsize($\times$ 1.44)& 344 \scriptsize($\times$ 1.49)\\
+& PSKV (Ours) & 142 \scriptsize($\times$ 1.56)& 145 \scriptsize($\times$ 1.45)& 48 \scriptsize($\times$ 1.79)& 14 \scriptsize($\times$ 1.86)& 227 \scriptsize($\times$ 1.54)& 275 \scriptsize($\times$ 1.87)\\
+\midrule
+\multirow{3}{*}{Llama-3-8B} 
+& None & 288 \scriptsize($\times$ 1.00)& 221 \scriptsize($\times$ 1.00)& 88 \scriptsize($\times$ 1.00)& 24 \scriptsize($\times$ 1.00)& 329 \scriptsize($\times$ 1.00)& 577 \scriptsize($\times$ 1.00)\\
+& Standard KV Cache & 151 \scriptsize($\times$ 1.91)& 141 \scriptsize($\times$ 1.57)& 48 \scriptsize($\times$ 1.83)& OOM& 240 \scriptsize($\times$ 1.37)& 282 \scriptsize($\times$ 2.05)\\
+& PSKV (Ours) & 141 \scriptsize($\times$ 2.04)& 138 \scriptsize($\times$ 1.60)& 45 \scriptsize($\times$ 1.96)& 14 \scriptsize($\times$ 1.71)& 242 \scriptsize($\times$ 1.36)& 307 \scriptsize($\times$ 1.88)\\
+\midrule
+\multirow{3}{*}{Mistral-7B} 
+& None & 211 \scriptsize($\times$ 1.00)& 203 \scriptsize($\times$ 1.00)& 81 \scriptsize($\times$ 1.00)& 25 \scriptsize($\times$ 1.00)& 320 \scriptsize($\times$ 1.00)& 96 \scriptsize($\times$ 1.00)\\
+& Standard KV Cache & 138 \scriptsize($\times$ 1.53)& 126 \scriptsize($\times$ 1.61)& 40 \scriptsize($\times$ 2.03)& OOM& 229 \scriptsize($\times$ 1.40)& 80 \scriptsize($\times$ 1.20)\\
+& PSKV (Ours) & 131 \scriptsize($\times$ 1.61)& 122 \scriptsize($\times$ 1.66)& 40 \scriptsize($\times$ 2.03)& 14 \scriptsize($\times$ 1.79)& 230 \scriptsize($\times$ 1.39)& 74 \scriptsize($\times$ 1.30)\\
+\midrule
+\multirow{3}{*}{Qwen2.5-7B} 
+& None & 250 \scriptsize($\times$ 1.00)& 242 \scriptsize($\times$ 1.00)& 84 \scriptsize($\times$ 1.00)& 26 \scriptsize($\times$ 1.00)& 295 \scriptsize($\times$ 1.00)& 102 \scriptsize($\times$ 1.00)\\
+& Standard KV Cache & 134 \scriptsize($\times$ 1.87)& 143 \scriptsize($\times$ 1.69)& 44 \scriptsize($\times$ 1.91)& OOM& 223 \scriptsize($\times$ 1.32)& 81 \scriptsize($\times$ 1.26)\\
+& PSKV (Ours) & 135 \scriptsize($\times$ 1.85)& 128 \scriptsize($\times$ 1.89)& 42 \scriptsize($\times$ 2.00)& 15 \scriptsize($\times$ 1.73)& 237 \scriptsize($\times$ 1.24)& 76 \scriptsize($\times$ 1.34)\\
+\bottomrule
+\end{tabular}%
+% }
+\end{table*}

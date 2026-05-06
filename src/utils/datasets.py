@@ -475,6 +475,44 @@ def harmbench_test_50():
     ds = HarmBenchTest50()
     return DatasetWrapper(ds, prompt_name="prompt", target_name="target")
 
+class WildJailbreak:
+    """Long-prompt dataset from allenai/wildjailbreak for testing PSKV on longer sequences."""
+    DEFAULT_TARGET = "Sure, here is"
+
+    def __init__(self, root: str = "../data", max_samples: int = 50, min_prompt_len: int = 100):
+        try:
+            ds = load_dataset("allenai/wildjailbreak", "eval", split="train")
+        except Exception:
+            ds = load_dataset("walledai/WildJailbreak", split="train")
+            
+        # Filter for adversarial_harmful (longer prompts)
+        filtered = [
+            row for row in ds
+            if row.get("data_type") == "adversarial_harmful"
+            and row.get("adversarial") is not None
+            and len(row["adversarial"]) >= min_prompt_len
+        ]
+        # Sort by length descending and take top samples
+        filtered.sort(key=lambda x: len(x["adversarial"]), reverse=True)
+        self.data = filtered[:max_samples]
+        print(f"WildJailbreak: loaded {len(self.data)} adversarial_harmful prompts "
+              f"(avg len: {np.mean([len(d['adversarial']) for d in self.data]):.0f} chars)")
+
+    def __getitem__(self, idx):
+        return {
+            "prompt": self.data[idx]["adversarial"],
+            "target": self.DEFAULT_TARGET,
+        }
+
+    def __len__(self):
+        return len(self.data)
+
+
+def wildjailbreak_50():
+    ds = WildJailbreak(max_samples=50, min_prompt_len=100)
+    return DatasetWrapper(ds, prompt_name="prompt", target_name="target")
+
+
 __dataset_zoo__ = {
     "advbench"         : advbench,
     "advbench-first50" : advbench_first50,
@@ -482,6 +520,7 @@ __dataset_zoo__ = {
     "harmbench"        : harmbench,
     "harmbench-test40" : harmbench_test_40,
     "harmbench-test50" : harmbench_test_50,
+    "wildjailbreak-50" : wildjailbreak_50,
 }
 
 def get_dataset(name):

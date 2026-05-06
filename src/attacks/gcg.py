@@ -8,7 +8,6 @@ from utils import (
     AttackerBase,
     forward_with_cache,
 )
-import pdb
 class GCG(AttackerBase):
     """
     A "batch inputs" implementation of the GCG Jailbreaking Attack.
@@ -132,6 +131,7 @@ class GCG(AttackerBase):
                 topk_ids.append(gd.topk(topk, dim=-1, largest=False).indices)
 
             topk_ids = torch.cat(topk_ids) # shape: [B, sfx_len, topk]
+            torch.cuda.empty_cache()
 
             # step 2: sampling and scoring candidates
             values = topk_ids.unsqueeze(0).expand(width, -1, -1, -1) # shape: [width, B, sfx_len, topk]
@@ -179,7 +179,7 @@ class GCG(AttackerBase):
                 score.append(scr_rows)
 
             score = torch.cat(score, dim=0).view(width*B)
-
+            torch.cuda.empty_cache()
             cand_ids = torch.cat([
                 message_ids.unsqueeze(0).expand(width, -1, -1),
                 cand_advsfx_ids,
