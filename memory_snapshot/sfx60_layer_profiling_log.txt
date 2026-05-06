@@ -1,138 +1,0 @@
-
-============================================================
-Profiling: model=meta-llama/Llama-2-7b-chat-hf, kv_cache=None
-============================================================
-Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|#####     | 1/2 [00:08<00:08,  8.60s/it]Loading checkpoint shards: 100%|##########| 2/2 [00:10<00:00,  4.75s/it]Loading checkpoint shards: 100%|##########| 2/2 [00:10<00:00,  5.33s/it]
-<frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
-<frozen importlib._bootstrap>:241: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
-Baseline GPU allocated (model loaded, 2 GPUs): 12852.6 MB
-Running 5 GCG steps with profiling...
-  0%|          | 0/5 [00:00<?, ?step/s] 20%|##        | 1/5 [00:35<02:23, 35.83s/step] 40%|####      | 2/5 [01:11<01:47, 35.80s/step] 60%|######    | 3/5 [01:46<01:10, 35.38s/step] 80%|########  | 4/5 [02:21<00:35, 35.18s/step]100%|##########| 5/5 [02:56<00:00, 35.08s/step]100%|##########| 5/5 [02:56<00:00, 35.26s/step]
-Peak GPU allocated (2 GPUs): 103379.8 MB
-Peak GPU reserved (2 GPUs): 119604.0 MB
-Memory snapshot saved to ../results/rebuttal/memory_profile/sfx60_harmbench/mem_snapshot_None.pickle
-
-============================================================
-Profiling: model=meta-llama/Llama-2-7b-chat-hf, kv_cache=Normal
-============================================================
-Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|#####     | 1/2 [00:03<00:03,  3.48s/it]Loading checkpoint shards: 100%|##########| 2/2 [00:04<00:00,  1.95s/it]Loading checkpoint shards: 100%|##########| 2/2 [00:04<00:00,  2.18s/it]
-Baseline GPU allocated (model loaded, 2 GPUs): 12885.1 MB
-After prefix cache init: 93634.2 MB (+80749.1 MB)
-Running 5 GCG steps with profiling...
-  0%|          | 0/5 [00:00<?, ?step/s]  0%|          | 0/5 [00:24<?, ?step/s]
-
-ERROR during profiling kv_cache=Normal: CUDA out of memory. Tried to allocate 8.01 GiB. GPU 0 has a total capacity of 79.25 GiB of which 5.83 GiB is free. Including non-PyTorch memory, this process has 73.42 GiB memory in use. Of the allocated memory 72.84 GiB is allocated by PyTorch, and 78.87 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
-Traceback (most recent call last):
-  File "/ibex/user/wangx0t/project/PSKV/src/memory_profile.py", line 172, in run_profiling
-    attacker.attack_embeds(
-  File "/ibex/user/wangx0t/project/PSKV/src/attacks/gcg_memory_test.py", line 265, in attack_embeds
-    out_logps = out_logits.log_softmax(dim=-1)
-                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 8.01 GiB. GPU 0 has a total capacity of 79.25 GiB of which 5.83 GiB is free. Including non-PyTorch memory, this process has 73.42 GiB memory in use. Of the allocated memory 72.84 GiB is allocated by PyTorch, and 78.87 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
-Peak GPU allocated (2 GPUs): 144442.2 MB
-Peak GPU reserved (2 GPUs): 151144.0 MB
-Memory snapshot saved to ../results/rebuttal/memory_profile/sfx60_harmbench/mem_snapshot_Normal_FAILED.pickle
-
-============================================================
-Profiling: model=meta-llama/Llama-2-7b-chat-hf, kv_cache=Ours
-============================================================
-Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|#####     | 1/2 [00:03<00:03,  3.14s/it]Loading checkpoint shards: 100%|##########| 2/2 [00:04<00:00,  1.92s/it]Loading checkpoint shards: 100%|##########| 2/2 [00:04<00:00,  2.11s/it]
-Baseline GPU allocated (model loaded, 2 GPUs): 12885.1 MB
-After prefix cache init: 25909.2 MB (+13024.1 MB)
-Running 5 GCG steps with profiling...
-  0%|          | 0/5 [00:00<?, ?step/s] 20%|##        | 1/5 [00:26<01:44, 26.03s/step] 40%|####      | 2/5 [00:52<01:18, 26.05s/step] 60%|######    | 3/5 [01:18<00:52, 26.37s/step] 80%|########  | 4/5 [01:45<00:26, 26.63s/step]100%|##########| 5/5 [02:12<00:00, 26.48s/step]100%|##########| 5/5 [02:12<00:00, 26.41s/step]
-Peak GPU allocated (2 GPUs): 84323.7 MB
-Peak GPU reserved (2 GPUs): 96564.0 MB
-Memory snapshot saved to ../results/rebuttal/memory_profile/sfx60_harmbench/mem_snapshot_Ours.pickle
-
-Results saved to ../results/rebuttal/memory_profile/sfx60_harmbench/memory_profile_Llama-2-7b-chat-hf.json
-
-============================================================
-COMPARISON SUMMARY
-============================================================
-  KV Cache = None:
-    Peak Allocated: 103379.8 MB
-    Peak Reserved:  119604.0 MB
-  KV Cache = Normal (OOM):
-    Peak Allocated: 144442.2 MB
-    Peak Reserved:  151144.0 MB
-  KV Cache = Ours:
-    Peak Allocated: 84323.7 MB
-    Peak Reserved:  96564.0 MB
-
-  Memory reduction (PSKV vs None): 18.4%
-
-  Normal KV cache: OOM (demonstrates memory overhead of full duplication)
-  PSKV succeeded with peak 84323.7 MB
-
-============================================================
-PER-PHASE PEAK MEMORY SUMMARY
-============================================================
-
-  [None] KV Cache Mode
-  Phase                           Peak (MB)  Mean (MB)  Samples
-  --------------------------------------------------------------
-  Grad::Forward                     76028.6    51612.7       29
-  Grad::LossBackward                74145.1    43248.2        7
-  Score::Forward                    55470.8    35051.2       24
-  Update::Filter                    46811.5    46811.5      136
-  Score::LossCompute                46808.0    46807.6        9
-  Update::SelectBest                46808.0    46808.0        1
-  Grad::TopKSelection               18929.9    17530.0       11
-  Grad::OneHotEmbed                 13100.6    13100.6        2
-  Init::EmbeddingLookup             12869.4    12869.4        1
-  model_load                        12852.5     6812.2      250
-
-  [Normal] KV Cache Mode
-  *** FAILED (OOM): partial data before crash ***
-  Phase                           Peak (MB)  Mean (MB)  Samples
-  --------------------------------------------------------------
-  Score::Forward                   118623.4   105867.2        5
-  Score::LossCompute               115425.6   115425.6        2
-  Grad::Forward                    103204.4    94084.4        8
-  prefix_cache_init                 94148.1    49915.8       21
-  Grad::LossBackward                93146.9    93146.9        1
-  Score::BuildCandEmbeds            87608.4    87608.4        1
-  Init::KVCache                     82941.4    46795.1       16
-  Grad::TopKSelection               82481.9    82481.9        2
-  model_load                        12885.0     7627.6      133
-
-  [Ours] KV Cache Mode
-  Phase                           Peak (MB)  Mean (MB)  Samples
-  --------------------------------------------------------------
-  Score::Forward                    66202.0    39078.6       21
-  Grad::Forward                     60874.0    49534.7       21
-  Grad::LossBackward                59680.9    33348.7        5
-  Grad::OneHotEmbed                 40411.0    40319.5        2
-  Update::Filter                    39504.9    39504.9      137
-  Score::LossCompute                39501.3    39500.6        9
-  prefix_cache_init                 23320.2    17768.3        4
-  Grad::TopKSelection               19890.5    18863.8       10
-  Init::KVCache                     13664.0    13664.0        1
-  model_load                        12885.0     8034.3      133
-
-============================================================
-CROSS-MODE COMPARISON (peak allocated MB per phase)
-============================================================
-  Phase                                 None (MB) Normal (OOM) (MB)        Ours (MB)
-  ---------------------------------------------------------------------------------
-  Grad::Forward                           76028.6         103204.4          60874.0
-  Grad::LossBackward                      74145.1          93146.9          59680.9
-  Grad::OneHotEmbed                       13100.6              0.0          40411.0
-  Grad::TopKSelection                     18929.9          82481.9          19890.5
-  Init::EmbeddingLookup                   12869.4              0.0              0.0
-  Init::KVCache                               0.0          82941.4          13664.0
-  Score::BuildCandEmbeds                      0.0          87608.4              0.0
-  Score::Forward                          55470.8         118623.4          66202.0
-  Score::LossCompute                      46808.0         115425.6          39501.3
-  Update::Filter                          46811.5              0.0          39504.9
-  Update::SelectBest                      46808.0              0.0              0.0
-  model_load                              12852.5          12885.0          12885.0
-  prefix_cache_init                           0.0          94148.1          23320.2
-
-============================================================
-MEMORY SNAPSHOTS (open in https://pytorch.org/memory_viz)
-============================================================
-  None: ../results/rebuttal/memory_profile/sfx60_harmbench/mem_snapshot_None.pickle
-  Normal_FAILED: ../results/rebuttal/memory_profile/sfx60_harmbench/mem_snapshot_Normal_FAILED.pickle
-  Ours: ../results/rebuttal/memory_profile/sfx60_harmbench/mem_snapshot_Ours.pickle
