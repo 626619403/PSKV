@@ -1,13 +1,6 @@
 # Accelerating Suffix Jailbreak Attacks with Prefix-Shared KV-cache
 
-This repository contains the code, configurations, and supplementary scripts for the paper *Accelerating Suffix Jailbreak Attacks with Prefix-Shared KV-cache*. It supports reproducing the main jailbreak attack experiments and the supplementary memory/logit-equivalence analyses.
-
-## Reviewer Notes
-
-- Supplementary memory snapshots and layer-by-layer profiling outputs are in `memory_snapshot/`.
-- Supplementary/rebuttal scripts are in `scripts/bash_script/rebuttal/`.
-- Auxiliary profiling and cache-correctness Python scripts are in `src/test/`.
-- Generated run logs and large experiment outputs are intentionally excluded from the repository unless explicitly listed.
+This repository contains the code, configurations, and supplementary scripts for the paper [Accelerating Suffix Jailbreak Attacks with Prefix-Shared KV-cache](https://arxiv.org/abs/2603.13420). It supports reproducing the main jailbreak attack experiments and the supplementary memory/logit-equivalence analyses.
 
 ## Setup
 
@@ -152,15 +145,6 @@ bash scripts/bash_script/rebuttal/repeated_asr/submit_harmbench_repeated_asr.sh
 
 The profiling Python entry points live under `src/test/`; see `src/test/readme.md`.
 
-## Result Summary
-
-The current seed-1/seed-2 HarmBench ASR summary is in:
-
-```text
-results/attack_success_rate.md
-```
-
-Cells are formatted as `seed1|seed2`; empty entries indicate missing logs or logs whose final line did not contain an ASR.
 
 ## License
 
