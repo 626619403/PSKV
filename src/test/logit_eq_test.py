@@ -4,10 +4,10 @@ Logit equivalence test: verify that PSKV produces numerically
 equivalent logits to full recomputation (No Cache).
 
 Usage:
-    python logit_equivalence_test.py \
+    python test/logit_eq_test.py \
         --model-id meta-llama/Llama-2-7b-chat-hf \
         --dataset harmbench-test50 \
-        --num-prompts 10 \
+        --num-prompts 1 \
         --suffix-length 20
 """
 import argparse
@@ -33,7 +33,8 @@ def test_logit_equivalence(model_id, dataset_name, num_prompts=10,
 
     # Load model
     model, tokenizer = utils.get_model(model_id)
-    model=model.to(torch.float64)
+    #if you wanna test in float64 for better numerical precision, uncomment the following line
+    #model=model.to(torch.float64)
     
     utils.fix_generation_config(model)
     device = model.device
@@ -254,4 +255,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

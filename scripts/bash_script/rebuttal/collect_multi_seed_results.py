@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Collect and summarize multi-seed ASR results for the rebuttal."""
+"""Collect and summarize multi-seed ASR results for supplementary experiments."""
 import os, json, glob, re
 import numpy as np
 

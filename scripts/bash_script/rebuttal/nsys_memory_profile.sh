@@ -11,6 +11,9 @@
 source ~/.bashrc
 conda activate attack
 module load cuda
+
+cd ./scripts
+
 # Resolve absolute paths before any cd
 PROJECT_ROOT=$(pwd)/..
 TRACE_DIR="${PROJECT_ROOT}/trace/traces"
@@ -33,8 +36,6 @@ SEARCH_WIDTH=64
 BATCH_SIZE=16
 NUM_PROMPTS=50
 NUM_PROMPTS_WILDJB=50
-
-cd ../src
 # ============================================================
 # Helper function: run nsys profile for one (dataset, sfx, kv) combo
 # ============================================================
@@ -60,7 +61,7 @@ run_nsys_profile() {
         --cuda-memory-usage=true \
         --output="${TRACE_DIR}/${TRACE_NAME}" \
         --force-overwrite=true \
-        python nsys_memory_profile.py \
+        python test/nsys_memory_profile.py \
             --model-id ${MODEL} \
             --dataset ${DATASET} \
             --num-prompts ${N_PROMPTS} \

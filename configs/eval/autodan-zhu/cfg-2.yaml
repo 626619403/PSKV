@@ -5,5 +5,5 @@ obj_w2: 100
 topb: 64
 temperature: 2
 
-batch_size: 16
+batch_size: 8
 iter_steps: 3

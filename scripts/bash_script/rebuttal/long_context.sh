@@ -42,7 +42,7 @@ done
 
 echo "[Memory Profile: sfx40 on Llama2]"
 cd ../src
-python memory_profile.py \
+python test/memory_profile.py \
     --model-id meta-llama/Llama-2-7b-chat-hf \
     --dataset harmbench-test50 \
     --num-prompts ${NUM_PROMPTS} \
@@ -62,7 +62,7 @@ done
 
 echo "[Memory Profile: sfx60 on Llama2]"
 cd ../src
-python memory_profile.py \
+python test/memory_profile.py \
     --model-id meta-llama/Llama-2-7b-chat-hf \
     --dataset harmbench-test50 \
     --num-prompts ${NUM_PROMPTS} \
@@ -86,7 +86,7 @@ done
 
 echo "[Memory Profile: sfx20 on WildJailbreak]"
 cd ../src
-python memory_profile.py \
+python test/memory_profile.py \
     --model-id meta-llama/Llama-2-7b-chat-hf \
     --dataset wildjailbreak-50 \
     --num-prompts ${NUM_PROMPTS_WILDJB} \

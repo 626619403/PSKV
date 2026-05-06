@@ -16,7 +16,7 @@ module load cuda/12.4.1
 cd ./scripts
 
 echo "=========================================="
-echo "Multi-seed ASR experiments for rebuttal"
+echo "Multi-seed ASR supplementary experiments"
 echo "Start time: $(date)"
 echo "=========================================="
 

@@ -1,110 +1,129 @@
 # Accelerating Suffix Jailbreak Attacks with Prefix-Shared KV-cache
 
-This repository contains the source code and experimental setup for the paper *"Accelerating Suffix Jailbreak Attacks with Prefix-Shared KV-cache"*. It provides the necessary tools to reproduce our findings on adversarial attacks against large language models.
+This repository contains the code, configurations, and supplementary scripts for the paper *Accelerating Suffix Jailbreak Attacks with Prefix-Shared KV-cache*. It supports reproducing the main jailbreak attack experiments and the supplementary memory/logit-equivalence analyses.
 
-## For reviewer
+## Reviewer Notes
 
-All of memory snapshots and layer-by-layer analysis results are under "memory_snapshot" folder. All of scripts used to run these experiment are under script/bash_script/rebuttal folder. 
+- Supplementary memory snapshots and layer-by-layer profiling outputs are in `memory_snapshot/`.
+- Supplementary/rebuttal scripts are in `scripts/bash_script/rebuttal/`.
+- Auxiliary profiling and cache-correctness Python scripts are in `src/test/`.
+- Generated run logs and large experiment outputs are intentionally excluded from the repository unless explicitly listed.
 
-## 1. Setup
+## Setup
 
-### Installation with Pip
+Create an environment and install the pinned dependencies:
 
 ```bash
-# It is recommended to use a virtual environment
 python -m venv venv
 source venv/bin/activate
-
-# Install core dependencies
-pip install torch torchvision torchaudio
-pip install peft==0.14.0 safetensors==0.4.5 datasets==3.2.0 accelerate==1.2.1 \
-    protobuf==5.29.1 sentencepiece==0.2.0 bitsandbytes==0.45.0 alpaca-eval==0.6.6
+pip install -r requirements.txt
 ```
 
-> **Note:** Ensure you have a compatible version of CUDA installed for GPU support.
-
-### Optional: vLLM (for `beast-vllm` baseline)
-
-The `beast-vllm` baseline requires [vLLM](https://vllm.ai) to be installed separately:
+The Dockerfile uses the same `requirements.txt`:
 
 ```bash
-pip install vllm
+docker build -t pskv .
 ```
 
-> If you encounter errors related to `common_ops`, please refer to the [vLLM installation guide](https://docs.vllm.ai/en/latest/getting_started/installation.html).
+Optional backends:
 
-### Optional: SGLang (for `beast-sglang` baseline)
+- `beast_vllm` / `beast-vllm` requires vLLM. Install it separately if you run that baseline.
+- `beast_sglang` / `beast-sglang` uses `sglang==0.4.9`, which is included in `requirements.txt`.
 
-The `beast-sglang` baseline requires [SGLang](https://sglang.readthedocs.io):
+The experiments require CUDA-capable GPUs and access to the Hugging Face model weights used by the scripts.
 
-```bash
-pip install sglang==0.4.9
+## Data
+
+The repository expects the AdvBench and HarmBench data under:
+
+```text
+data/advbench/
+data/harmbench/
 ```
 
----
+The included data files mirror the original public datasets. If recreating from scratch, download AdvBench from `llm-attacks/llm-attacks` and HarmBench from `centerforaisafety/HarmBench`, then place the files in the paths above.
 
-## 2. Repository Structure
+## Repository Structure
 
-```
-.
-├── configs/                # Configuration files for training and evaluation
-│   ├── train/
-│   └── eval/
-│       ├── beast/          # BEAST attack configs
-│       ├── beast_vllm/     # BEAST-vLLM baseline configs
-│       ├── beast_sglang/   # BEAST-SGLang baseline configs
-│       ├── gcg/
-│       ├── gcq/
-│       ├── ample-gcg/
-│       └── autodan-zhu/
-├── data/                   # Datasets
-│   ├── advbench/
-│   └── harmbench/
-├── results/                # Output directory for trained models and logs
-├── scripts/                # Shell scripts to run experiments
-│   ├── train/
-│   └── eval/
-├── src/                    # Source code
-│   ├── attacks/            # Implementation of attack methods
-│   │   ├── beast.py        # BEAST (standard, HuggingFace)
-│   │   ├── beast_vllm.py   # BEAST accelerated with vLLM
-│   │   ├── beast_sglang.py # BEAST accelerated with SGLang
-│   │   ├── gcg.py
-│   │   ├── gcq.py
-│   │   ├── AmpleGCG.py
-│   │   ├── autodan_zhu.py
-│   │   └── advPrompter.py
-│   ├── utils/              # Utility functions
-│   ├── train.py            # Main training script
-│   └── evaluate.py         # Main evaluation script
-├── Dockerfile              # Dockerfile for environment setup
-└── README.md               # This file
+```text
+configs/                  Training and evaluation YAML configs
+data/                     AdvBench and HarmBench data files
+memory_snapshot/          Supplementary memory/profile artifacts
+results/                  Ignored output directory; selected Markdown summaries may be tracked
+scripts/eval/             Model-specific evaluation launchers
+scripts/train/            Model-specific training launchers
+scripts/bash_script/      Batch scripts for full experiments and supplementary analyses
+src/attacks/              Attack implementations
+src/evaltools/            Evaluation set and judging utilities
+src/utils/                Model, dataset, KV-cache, and logging utilities
+src/test/                 Auxiliary profiling and correctness scripts
 ```
 
----
+## Evaluation
 
-## 3. Data
-
-This project uses the [AdvBench](https://github.com/llm-attacks/llm-attacks) and [HarmBench](https://github.com/centerforaisafety/HarmBench) datasets. Please download them and place them into the `data/advbench` and `data/harmbench` directories respectively.
-
----
-
-## 4. Running Experiments
-
-Experiments are run using the `src/train.py` and `src/evaluate.py` scripts. We provide configuration files and helper scripts in the `configs/` and `scripts/` directories.
-
-Please refer to [scripts/README.md](./scripts/README.md) for a detailed tutorial on running all experiments.
-
-### Training
-
-Use the shell scripts located in `scripts/train/` to run adversarial training. Supported attack methods for training are `ample-gcg` and `adv-prompter`.
-
-**Example:**
+Run evaluation scripts from `scripts/`. Attack names with hyphens and underscores are both accepted for the vLLM/SGLang BEAST baselines; outputs use the underscore form in result paths.
 
 ```bash
 cd scripts
 
-# AmpleGCG training on Llama-2-7b with our KV-cache
+# Standard GCG evaluation
+bash eval/llama3.sh \
+    --src-path ../src \
+    --eval-cfg 2 \
+    --dataset harmbench-test50 \
+    --attack gcg \
+    --kv-cache Ours \
+    --random-seed 1
+
+# Standard BEAST evaluation
+bash eval/llama3.sh \
+    --src-path ../src \
+    --eval-cfg 2 \
+    --dataset harmbench-test50 \
+    --attack beast \
+    --kv-cache Ours
+
+# BEAST with vLLM
+bash eval/llama3.sh \
+    --src-path ../src \
+    --eval-cfg 2 \
+    --dataset harmbench-test50 \
+    --attack beast-vllm \
+    --kv-cache None
+
+# BEAST with SGLang
+bash eval/llama3.sh \
+    --src-path ../src \
+    --eval-cfg 2 \
+    --dataset harmbench-test50 \
+    --attack beast-sglang \
+    --kv-cache None
+```
+
+Supported evaluation arguments:
+
+| Argument | Description |
+|---|---|
+| `--src-path` | Path to `src/`, usually `../src` from `scripts/` |
+| `--eval-cfg` | Config ID from `configs/eval/<attack>/cfg-<ID>.yaml` |
+| `--dataset` | `harmbench-test50`, `advbench-first50`, or `wildjailbreak-50` where supported |
+| `--attack` | `gcg`, `gcq`, `beast`, `beast-vllm`, `beast-sglang`, `autodan-zhu`, `ample-gcg`, or `adv-prompter` |
+| `--kv-cache` | `None`, `Normal`, or `Ours` |
+| `--random-seed` | Optional seed; result directory gets `_seed<seed>` suffix |
+
+Each evaluation script first builds an evaluation set and then judges it with the HarmBench classifier. Results are written to:
+
+```text
+results/<model>/eval-<attack>/cfg-<cfg>/kv-cache-<None|Normal|Ours>[_seedN]/
+```
+
+## Training
+
+Run adversarial training scripts from `scripts/`:
+
+```bash
+cd scripts
+
 bash train/llama2.sh \
     --src-path ../src \
     --train-cfg 1 \
@@ -113,94 +132,36 @@ bash train/llama2.sh \
     --kv-cache Ours
 ```
 
-**Arguments:**
+Supported training attacks are `ample-gcg` and `adv-prompter`.
 
-| Argument | Description | Valid Values |
-|---|---|---|
-| `--src-path` | Path to the `src/` directory | e.g., `../src` |
-| `--train-cfg` | Config ID from `configs/train/{attack}/cfg-<ID>.yaml` | e.g., `1`, `2` |
-| `--dataset` | Dataset to use | `harmbench`, `advbench` |
-| `--attack` | Attack method | `ample-gcg`, `adv-prompter` |
-| `--kv-cache` | KV-cache strategy | `None`, `Normal`, `Ours` |
+## Supplementary Experiments
 
-### Evaluation
+The supplementary batch scripts are under `scripts/bash_script/rebuttal/`. They include:
 
-Use the shell scripts in `scripts/eval/` to run jailbreak evaluation. Supported attack methods include the two new **vLLM** and **SGLang** accelerated baselines.
+- multi-seed ASR runs
+- AdvPrompter multi-seed runs
+- long-context memory profiling
+- nsys memory profiling
+- ASR aggregation
 
-**Example:**
+Example:
 
 ```bash
-cd scripts
-
-# Evaluate Llama-3-8B with standard BEAST
-bash eval/llama3.sh \
-    --src-path ../src \
-    --eval-cfg 1 \
-    --dataset harmbench-test50 \
-    --attack beast \
-    --kv-cache Ours
-
-# Evaluate with BEAST-vLLM baseline
-bash eval/llama3.sh \
-    --src-path ../src \
-    --eval-cfg 1 \
-    --dataset harmbench-test50 \
-    --attack beast-vllm \
-    --kv-cache None
-
-# Evaluate with BEAST-SGLang baseline
-bash eval/llama3.sh \
-    --src-path ../src \
-    --eval-cfg 1 \
-    --dataset harmbench-test50 \
-    --attack beast-sglang \
-    --kv-cache None
+bash scripts/bash_script/rebuttal/repeated_asr/submit_harmbench_repeated_asr.sh
 ```
 
-**Arguments:**
+The profiling Python entry points live under `src/test/`; see `src/test/readme.md`.
 
-| Argument | Description | Valid Values |
-|---|---|---|
-| `--src-path` | Path to the `src/` directory | e.g., `../src` |
-| `--eval-cfg` | Config ID from `configs/eval/{attack}/cfg-<ID>.yaml` | e.g., `1`, `2` |
-| `--dataset` | Evaluation dataset | `harmbench-test50`, `advbench-first50` |
-| `--attack` | Attack method | `gcg`, `beast`, `beast-vllm`, `beast-sglang`, `autodan-zhu`, `ample-gcg`, `gcq` |
-| `--kv-cache` | KV-cache strategy | `None`, `Normal`, `Ours` |
+## Result Summary
 
----
+The current seed-1/seed-2 HarmBench ASR summary is in:
 
-## 5. New Baselines: BEAST-vLLM and BEAST-SGLang
+```text
+results/attack_success_rate.md
+```
 
-We introduce two new inference-accelerated baselines for the [BEAST attack](https://arxiv.org/pdf/2402.15570) that replace the standard HuggingFace model forward pass with high-throughput inference engines. Both baselines leverage **prefix KV-cache sharing** natively provided by the inference engine to speed up the beam search process.
+Cells are formatted as `seed1|seed2`; empty entries indicate missing logs or logs whose final line did not contain an ASR.
 
-### BEAST-vLLM (`beast-vllm`)
+## License
 
-- **Implementation:** [`src/attacks/beast_vllm.py`](./src/attacks/beast_vllm.py)
-- **Config directory:** [`configs/eval/beast_vllm/`](./configs/eval/beast_vllm/)
-- **Backend:** [vLLM](https://vllm.ai) with `enable_prefix_caching=True`
-- **Key parameters** (set in `configs/eval/beast_vllm/cfg-*.yaml`):
-  - `suffix_length`: Length of the adversarial suffix to generate.
-  - `beam_size`: Number of beams in beam search.
-  - `search_width`: Number of candidate tokens expanded per beam per step.
-  - `gpu_memory_utilization`: Fraction of GPU memory for vLLM (default: `0.9`).
-  - `tensor_parallel_size`: Number of GPUs for tensor parallelism (default: `1`).
-
-### BEAST-SGLang (`beast-sglang`)
-
-- **Implementation:** [`src/attacks/beast_sglang.py`](./src/attacks/beast_sglang.py)
-- **Config directory:** [`configs/eval/beast_sglang/`](./configs/eval/beast_sglang/)
-- **Backend:** [SGLang](https://sglang.readthedocs.io) `Engine` with `RadixAttention` for automatic KV-cache reuse.
-- **Key parameters** (set in `configs/eval/beast_sglang/cfg-*.yaml`):
-  - `suffix_length`: Length of the adversarial suffix to generate.
-  - `beam_size`: Number of beams in beam search.
-  - `search_width`: Number of candidate tokens expanded per beam per step.
-  - `gpu_memory_utilization`: Fraction of GPU memory for SGLang (default: `0.9`).
-  - `tp_size`: Tensor parallel size (default: `1`).
-
-> **Note:** `beast-vllm` and `beast-sglang` accept a HuggingFace model ID or a local model path directly. The inference engine is initialized internally — no separate model loading is required before calling the eval script.
-
----
-
-## 6. License
-
-This project is licensed under the terms of the [LICENSE](LICENSE) file.
+This project is licensed under the terms of the `LICENSE` file.

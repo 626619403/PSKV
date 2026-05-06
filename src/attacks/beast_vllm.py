@@ -15,8 +15,7 @@ class BEAST_VLLM(AttackerBase):
     vLLM accelerated implementation of BEAST attack.
     Uses 'enable_prefix_caching=True' to speed up the beam search tree exploration.
     """
-    """install vllm and its dependencies following https://vllm.ai/getting_started/installation.html. 
-    if you meet bugs about common_ops, please refer to"""
+    """Install vLLM separately before using this attacker."""
     def __init__(
         self,
         suffix_length: int,

@@ -231,7 +231,7 @@ def print_phase_summary(results):
     print("PER-PHASE PEAK MEMORY SUMMARY")
     print(f"{'='*60}")
 
-    for kv_mode in ["None", "Normal", "Ours"]:
+    for kv_mode in ["Ours"]:
         if kv_mode not in results:
             continue
         records = results[kv_mode].get("tracker_records")
@@ -253,7 +253,7 @@ def print_phase_summary(results):
             print(f"  {phase:<30} {row['max']:>10.1f} {row['mean']:>10.1f} {int(row['count']):>8}")
 
     # Cross-mode comparison
-    modes_with_data = [m for m in ["None", "Normal", "Ours"]
+    modes_with_data = [m for m in ["Ours"]
                        if m in results and results[m].get("tracker_records")]
     if len(modes_with_data) >= 2:
         print(f"\n{'='*60}")
@@ -301,7 +301,7 @@ def main():
     sys.stdout = TeeOutput(log_path)
     sys.stderr = TeeOutput(os.path.join(args.save_dir, "profiling_err.txt"))
     results = {}
-    for kv_mode in ["None", "Normal", "Ours"]:
+    for kv_mode in [ "Ours"]:
         result = run_profiling(
             model_id=args.model_id,
             dataset_name=args.dataset,
@@ -348,7 +348,7 @@ def main():
     print(f"\n{'='*60}")
     print("MEMORY SNAPSHOTS (open in https://pytorch.org/memory_viz)")
     print(f"{'='*60}")
-    for kv_mode in ["None", "Normal", "Ours"]:
+    for kv_mode in ["Ours"]:
         for suffix in ["", "_FAILED"]:
             path = os.path.join(args.save_dir, f"mem_snapshot_{kv_mode}{suffix}.pickle")
             if os.path.exists(path):

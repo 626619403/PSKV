@@ -15,7 +15,7 @@ module load cuda/12.4.1
 cd ./scripts
 
 echo "=========================================="
-echo "Multi-seed AdvPrompter experiments for rebuttal"
+echo "Multi-seed AdvPrompter supplementary experiments"
 echo "Start time: $(date)"
 echo "=========================================="
 

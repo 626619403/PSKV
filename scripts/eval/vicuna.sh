@@ -46,7 +46,7 @@ elif [[ -z $dataset ]] || [[ $dataset != "harmbench-test50" ]] && [[ $dataset !=
     echo "Error: --dataset is required and should be 'harmbench-test50', 'advbench-first50', or 'wildjailbreak-50'"
     exit 1
 elif [[ -z $attack ]]; then
-    echo "Error: --attack is required and should be either 'ample-gcg' 'gcg', 'beast', 'autodan-zhu' or 'gcq'"
+    echo "Error: --attack is required"
     exit 1
 elif [[ -z $kv_cache ]] || [[ $kv_cache != "None" ]] && [[ $kv_cache != "Normal" ]] && [[ $kv_cache != "Ours" ]]; then
     echo "Error: --kv-cache is required and should be one of 'None', 'Normal', or 'Ours'"
@@ -61,11 +61,25 @@ elif [[ $dataset == "wildjailbreak-50" ]]; then
     ds_name="wildjailbreak"
 fi
 
+attack_cfg="$attack"
+case "$attack_cfg" in
+    beast-vllm) attack_cfg="beast_vllm" ;;
+    beast-sglang) attack_cfg="beast_sglang" ;;
+esac
+case "${attack_cfg}" in
+    gcg|gcq|beast|beast_vllm|beast_sglang|autodan-zhu|ample-gcg|adv-prompter)
+        ;;
+    *)
+        echo "Error: --attack should be one of 'gcg', 'gcq', 'beast', 'beast-vllm', 'beast-sglang', 'autodan-zhu', 'ample-gcg', or 'adv-prompter'"
+        exit 1
+        ;;
+esac
+
 cd ${src_path}
 
 model_id="lmsys/vicuna-7b-v1.5"
 datacollator="vicuna-chat"
-if LAUNCHER="" ; then
+if [[ -z "${LAUNCHER}" ]]; then
     LAUNCHER="python3"
 fi
 
@@ -77,14 +91,14 @@ if [[ -n ${random_seed} ]]; then
     SEED_SUFFIX="_seed${random_seed}"
 fi
 
-save_path="../results/vicuna/eval-${attack}/cfg-$k/kv-cache-${kv_cache}${SEED_SUFFIX}"
+save_path="../results/vicuna/eval-${attack_cfg}/cfg-$k/kv-cache-${kv_cache}${SEED_SUFFIX}"
 
 ${LAUNCHER} evaluate.py \
     --model-id ${model_id} \
     --dataset ${dataset} \
     --datacollator ${datacollator} \
     --evalset-cfg-path ../configs/eval/evalset.yaml \
-    --atker-cfg-path ../configs/eval/${attack}/cfg-$k.yaml \
+    --atker-cfg-path ../configs/eval/${attack_cfg}/cfg-$k.yaml \
     --save-dir ${save_path} \
     --exp-type build-evalset \
     --save-name build-${ds_name} \

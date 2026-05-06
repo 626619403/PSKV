@@ -19,7 +19,7 @@ echo "Start time: $(date)"
 echo "=========================================="
 
 cd ../src
-python ../../src/memory_profile.py \
+python test/memory_profile.py \
     --model-id meta-llama/Llama-2-7b-chat-hf \
     --dataset harmbench-test50 \
     --num-prompts 5 \

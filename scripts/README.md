@@ -1,87 +1,67 @@
+# Running Scripts
 
-# Tutorial on Running Scripts
+Run these commands from the `scripts/` directory unless noted otherwise.
 
-[Scripts](./) can be divided into 2 categories:
-
-- [scripts/train](./train) stores all scripts for adversarial training with **AmpleGCG** and **Adv-Prompter**.
-- [scripts/eval](./eval) stores all scripts for robust evaluation with **GCG**, **BEAST**, **BEAST-vLLM**, **BEAST-SGLang**, **AutoDAN-Zhu**, **AmpleGCG** and **GCQ** attacks.
-
-Here we present a brief tutorial on how to run experiments with these scripts.
-
-**Step 0:** Enter the script folder:
+## Evaluation
 
 ```bash
-cd ./scripts
+cd scripts
+
+bash eval/llama3.sh \
+    --src-path ../src \
+    --eval-cfg 2 \
+    --dataset harmbench-test50 \
+    --attack gcg \
+    --kv-cache Ours \
+    --random-seed 1
 ```
 
----
+Supported attacks are `gcg`, `gcq`, `beast`, `beast-vllm`, `beast-sglang`, `autodan-zhu`, `ample-gcg`, and `adv-prompter`. The eval scripts also accept `beast_vllm` and `beast_sglang`; result paths use the underscore form.
 
-## Option 1: Adversarial Training (with automatic evaluation)
-
-**Perform adversarial training** (includes automatic evaluation after training):
+Examples:
 
 ```bash
-# AmpleGCG training
-bash train/vicuna.sh --src-path ../src --train-cfg 1 --dataset harmbench --attack ample-gcg --kv-cache Ours
+# Standard BEAST
+bash eval/llama3.sh --src-path ../src --eval-cfg 2 --dataset harmbench-test50 --attack beast --kv-cache Ours
 
-# Adv-Prompter training
-bash train/vicuna.sh --src-path ../src --train-cfg 2 --dataset harmbench --attack adv-prompter --kv-cache None
+# BEAST-vLLM baseline
+bash eval/llama3.sh --src-path ../src --eval-cfg 2 --dataset harmbench-test50 --attack beast-vllm --kv-cache None
+
+# BEAST-SGLang baseline
+bash eval/llama3.sh --src-path ../src --eval-cfg 2 --dataset harmbench-test50 --attack beast-sglang --kv-cache None
 ```
 
-where:
-- `--train-cfg` should exist in `../configs/train/{attack_method}`
-- `--dataset` should be either `harmbench` or `advbench`
-- `--attack` should be either `ample-gcg` or `adv-prompter`
-- `--kv-cache` should be one of `None`, `Normal`, or `Ours`
+Each eval script builds the evaluation set and then judges it with the HarmBench classifier. Outputs are written under:
 
-**Note:** `adv-prompter` training scripts automatically evaluate the trained model during the training period.
+```text
+../results/<model>/eval-<attack>/cfg-<cfg>/kv-cache-<mode>[_seedN]/
+```
 
----
-
-## Option 2: Direct Evaluation with Jailbreak Attacks
-
-**Generate harmful responses via jailbreak attacks** and calculate attack success rate (ASR) based on induced harmful responses with the [LLM judger from Harmbench](https://huggingface.co/cais/HarmBench-Llama-2-13b-cls).
+## Training
 
 ```bash
-# Evaluate vanilla pre-trained model with GCG
-bash eval/llama3.sh --src-path ../src --eval-cfg 1 --dataset harmbench-test50 --attack gcg --kv-cache Ours
+cd scripts
 
-# Evaluate adversarially trained model with AmpleGCG
-bash eval/llama2.sh --src-path ../src --eval-cfg 1 --dataset harmbench-test50 --attack ample-gcg --kv-cache Normal
-
-# Evaluate with standard BEAST
-bash eval/llama3.sh --src-path ../src --eval-cfg 1 --dataset harmbench-test50 --attack beast --kv-cache Ours
-
-# Evaluate with BEAST-vLLM baseline (requires vllm installed)
-bash eval/llama3.sh --src-path ../src --eval-cfg 1 --dataset harmbench-test50 --attack beast-vllm --kv-cache None
-
-# Evaluate with BEAST-SGLang baseline (requires sglang installed)
-bash eval/llama3.sh --src-path ../src --eval-cfg 1 --dataset harmbench-test50 --attack beast-sglang --kv-cache None
+bash train/vicuna.sh \
+    --src-path ../src \
+    --train-cfg 1 \
+    --dataset harmbench \
+    --attack ample-gcg \
+    --kv-cache Ours
 ```
 
-where:
+Supported training attacks are `ample-gcg` and `adv-prompter`.
 
-- `--eval-cfg` should exist in `../configs/eval/{attack_method}`
-- `--dataset` should be either `harmbench-test50` or `advbench-first50`
-- `--attack` should be one of `gcg`, `beast`, `beast-vllm`, `beast-sglang`, `autodan-zhu`, `ample-gcg`, or `gcq`
-- `--kv-cache` should be one of `None`, `Normal`, or `Ours`
+## Supplementary Batch Scripts
 
-> **Note:** `beast-vllm` and `beast-sglang` use inference engines that manage KV-cache internally. It is recommended to set `--kv-cache None` for these two baselines.
+Supplementary and rebuttal batch scripts live in:
 
-**Note:** Evaluation scripts automatically:
-1. Build the evaluation set with the specified attack
-2. Judge the generated responses using the Harmbench classifier
+```text
+scripts/bash_script/rebuttal/
+```
 
----
+The `repeated_asr/` subdirectory submits the HarmBench seed-1/seed-2 ASR runs:
 
-## New Baselines: BEAST-vLLM and BEAST-SGLang
-
-Two new inference-accelerated baselines are available for the BEAST attack:
-
-| Baseline | `--attack` flag | Backend | KV-cache mechanism | Install |
-|---|---|---|---|---|
-| BEAST-vLLM | `beast-vllm` | [vLLM](https://vllm.ai) | `enable_prefix_caching=True` | `pip install vllm` |
-| BEAST-SGLang | `beast-sglang` | [SGLang](https://sglang.readthedocs.io) | `RadixAttention` | `pip install sglang==0.4.9` |
-
-Config files are located in `../configs/eval/beast_vllm/` and `../configs/eval/beast_sglang/` respectively.
-
+```bash
+bash ./scripts/bash_script/rebuttal/repeated_asr/submit_harmbench_repeated_asr.sh
+```
